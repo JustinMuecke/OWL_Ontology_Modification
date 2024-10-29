@@ -1,0 +1,12 @@
+
+˜	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(îãğ‹ûÿÿÿÿ8ÍøïÆ­2J$8ab2fa8d-a41a-438f-b849-4e5025018b2f
+	java:S112-"FDefine and throw a dedicated exception instead of using a generic one.(¼ÿ¾¹ÿÿÿÿÿ8ÏøïÆ­2J$b92b8c30-9706-4ad5-aea6-1835c4e0852a
+›	java:S135#"YReduce the total number of break and continue statements in this loop to use at most one.(ªÈ”8ĞøïÆ­2J$ea0e20db-bc5c-499d-88c8-dd286a1528e1
+¤
+java:S1450"aRemove the "possibleInjections" field and declare it as a local variable in the relevant methods.(‚ùß”8çğÆ­2J$5cf69f97-9415-4936-9f12-52929574d3ac
+
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(æË™çüÿÿÿÿ8çğÆ­2J$9c4bd795-9106-4cf8-9b70-e2c3eaa425c1
+
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(Çõ†şÿÿÿÿ8çğÆ­2J$2c57ff35-5168-495f-b2d8-34cc23aba7b2
+r	java:S106C"+Replace this use of System.out by a logger.(Ò½Œµøÿÿÿÿ8†ÒğÆ­2J$8d271d70-9ba3-417a-8289-4255b8b4df28
+m	java:S106F"+Replace this use of System.err by a logger.(ìÆŸÎ8®üğÆ­2J$80c6d40b-99a1-4c8b-982e-b978123ac340
