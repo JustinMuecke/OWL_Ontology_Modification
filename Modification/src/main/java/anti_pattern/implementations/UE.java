@@ -7,19 +7,21 @@ import org.semanticweb.owlapi.model.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class OIL implements Anti_Pattern {
+public class UE implements Anti_Pattern {
+
     private final Random randomPicker;
     private final OWLDataFactory dataFactory;
-    public OIL() {
-        randomPicker = new Random();
+
+    public UE(Random randomPicker, OWLDataFactory dataFactory) {
+        this.randomPicker = randomPicker;
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-        dataFactory = manager.getOWLDataFactory();
+        this.dataFactory = dataFactory;
     }
 
     /**
-     * c1 ⊑ ∀R.c2, c1 ⊑ ∀𝑅.c3, 𝐷𝑖𝑠𝑗 (𝑐2, 𝑐3)
-     * @param ontology ontology on which to perform search
-     * @return the Axiom which can be injected into the ontology if found, else it Optional.empty
+     * Pattern: 𝑐1 ⊑ ∀𝑅.𝑐2, 𝑐1 ⊑ ∃𝑅.𝑐3, 𝐷𝑖𝑠𝑗 (𝑐2,𝑐3)
+     * @param ontology
+     * @return
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
@@ -30,16 +32,16 @@ public class OIL implements Anti_Pattern {
             if(restrictionAroundC2.getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM)){
                 OWLClassExpression c2 = ((OWLObjectAllValuesFrom) restrictionAroundC2).getFiller();
 
-                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∀𝑅.c3 and disjoin c3,c2
-                Set<OWLObjectAllValuesFrom> possibleC3 = ontology.axioms(AxiomType.SUBCLASS_OF)
+                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∃𝑅.𝑐3 and disjoin c3,c2
+                Set<OWLObjectSomeValuesFrom> possibleC3 = ontology.axioms(AxiomType.SUBCLASS_OF)
                         .filter(ax -> ax.getSubClass().equals(c1))
                         .map(OWLSubClassOfAxiom::getSuperClass)
                         .filter(superClass -> !superClass.equals(restrictionAroundC2))
-                        .filter(superClass -> superClass.getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
-                        .map(ax -> (OWLObjectAllValuesFrom) ax)
+                        .filter(superClass -> superClass.getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
+                        .map(ax -> (OWLObjectSomeValuesFrom) ax)
                         .collect(Collectors.toSet());
                 if(!possibleC3.isEmpty()){
-                    for(OWLObjectAllValuesFrom c3 : possibleC3){
+                    for(OWLObjectSomeValuesFrom c3 : possibleC3){
                         OWLDisjointClassesAxiom injectableAxiom = dataFactory.getOWLDisjointClassesAxiom(c2, c3.getFiller());
                         possibleInjections.add(injectableAxiom);
                     }
@@ -53,7 +55,7 @@ public class OIL implements Anti_Pattern {
                             return classExpressions.iterator().next();
                         }).collect(Collectors.toSet());
                 for(OWLClassExpression c : possibleDisjoints){
-                    OWLObjectAllValuesFrom restriction = dataFactory.getOWLObjectAllValuesFrom(((OWLObjectAllValuesFrom) restrictionAroundC2).getProperty(), c);
+                    OWLObjectSomeValuesFrom restriction = dataFactory.getOWLObjectSomeValuesFrom(((OWLObjectAllValuesFrom) restrictionAroundC2).getProperty(), c);
                     OWLSubClassOfAxiom injectableAxiom = dataFactory.getOWLSubClassOfAxiom(c1, restriction);
                     possibleInjections.add(injectableAxiom);
                 }
@@ -62,8 +64,9 @@ public class OIL implements Anti_Pattern {
         return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
     }
 
+
     @Override
     public String getName() {
-        return "OIL";
+        return "UE";
     }
 }

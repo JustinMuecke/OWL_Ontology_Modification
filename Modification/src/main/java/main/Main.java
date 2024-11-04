@@ -3,6 +3,8 @@ package main;
 import anti_pattern.implementations.AIO;
 import anti_pattern.Anti_Pattern;
 import anti_pattern.implementations.EID;
+import anti_pattern.implementations.OIL;
+import anti_pattern.implementations.OILWI;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 
@@ -20,7 +22,9 @@ public class Main {
     private static HashMap<String, OWLAxiom> possibleInjections;
     private static List<Anti_Pattern> consideredAntiPattern = new LinkedList<>(List.of(
             new EID(),
-            new AIO()
+            new AIO(),
+            new OIL(),
+            new OILWI()
             ));
 
     public static void main(String[] args) {
