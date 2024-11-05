@@ -12,21 +12,21 @@ public class UEWI1 implements Anti_Pattern {
     private final Random randomPicker;
     private final OWLDataFactory dataFactory;
 
-    public UEWI1(Random randomPicker, OWLDataFactory dataFactory) {
+    public UEWI1() {
+        randomPicker = new Random();
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-        this.randomPicker = randomPicker;
-        this.dataFactory = dataFactory;
+        dataFactory = manager.getOWLDataFactory();
     }
 
     /**
-     * c1⊑𝑐2, 𝑐1 ⊑ ∃𝑅.𝑐3, 𝑐2 ⊑ ∀𝑅.𝑐4, 𝐷𝑖𝑠𝑗 (𝑐3, 𝑐4)
+     * c1⊑c2, c1 ⊑ ∃R.c3, c2 ⊑ ∀R.c4, Disj (c3, c4)
      * @param ontology
      * @return
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new ArrayList<>();
-        //a1: 𝑐1⊑𝑐2, a2: 𝑐1⊑∀𝑅.𝑐3, a3: 𝑐2⊑∀𝑅.𝑐4 in ontology -> insert 𝐷𝑖𝑠𝑗(c3,c4)
+        //a1: c1⊑c2, a2: c1⊑∀R.c3, a3: c2⊑∀R.c4 in ontology -> insert Disj(c3,c4)
 
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
@@ -49,8 +49,8 @@ public class UEWI1 implements Anti_Pattern {
                 break;
             }
         }
-        //a1: 𝑐1⊑𝑐2, a2.1: 𝑐1⊑∀𝑅.𝑐3, a3: 𝐷𝑖𝑠𝑗(c3,c4) in ontology -> insert 𝑐2⊑∃𝑅.𝑐4
-        //           a2.2: 𝑐2⊑∃𝑅.𝑐4                              -> insert 𝑐1⊑∀𝑅.𝑐3
+        //a1: c1⊑c2, a2.1: c1⊑∀R.c3, a3: Disj(c3,c4) in ontology -> insert c2⊑∃R.c4
+        //           a2.2: c2⊑∃R.c4                              -> insert c1⊑∀R.c3
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
             OWLClassExpression c2 = axiom.getSuperClass();
@@ -62,7 +62,7 @@ public class UEWI1 implements Anti_Pattern {
                 Util.findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(ontology, possibleInjections, c2, c1,dataFactory);
             }
         }
-        // 𝑐1 ⊑ ∃𝑅.𝑐3, 𝑐2 ⊑ ∀𝑅.𝑐4, 𝐷𝑖𝑠𝑗 (𝑐3, 𝑐4) in ontology -> insert 𝑐1⊑𝑐2
+        // c1 ⊑ ∃R.c3, c2 ⊑ ∀R.c4, Disj (c3, c4) in ontology -> insert c1⊑c2
         for (OWLDisjointClassesAxiom axiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)) {
             Set<OWLClassExpression> classes = axiom.getClassExpressions();
             Stream<OWLSubClassOfAxiom> axiomStream = ontology.axioms(AxiomType.SUBCLASS_OF)
@@ -75,17 +75,17 @@ public class UEWI1 implements Anti_Pattern {
                 OWLClassExpression c3 = possibleSubClassAxiom.getSubClass();
 
                 Set<OWLSubClassOfAxiom> foundPattern = ontology
-                        //𝑐2 ⊑ x
+                        //c2 ⊑ x
                         .axioms(AxiomType.SUBCLASS_OF)
-                        //x=∀𝑅.𝑐4
+                        //x=∀R.c4
                         .filter(subClassOfAxiom-> subClassOfAxiom.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
                         // c4 in Disj(x..)
                         .filter(ax -> classes.contains(((OWLObjectAllValuesFrom) ax.getSuperClass()).getFiller()))
-                        //R is same as 𝑐1 ⊑ ∃𝑅.𝑐3
+                        //R is same as c1 ⊑ ∃R.c3
                         .filter(ax -> ((OWLObjectAllValuesFrom) ax.getSuperClass()).getProperty().equals(property))
-                        //c4 != c1 in 𝑐1 ⊑ ∃𝑅.𝑐3
+                        //c4 != c1 in c1 ⊑ ∃R.c3
                         .filter(ax -> !ax.getSubClass().equals(c3))
-                        //c4 != c3 in 𝑐1 ⊑ ∃𝑅.𝑐3
+                        //c4 != c3 in c1 ⊑ ∃R.c3
                         .filter(ax -> !((OWLObjectSomeValuesFrom) ax.getSuperClass()).getFiller().equals(((OWLObjectSomeValuesFrom) possibleSubClassAxiom).getFiller()))
                         //x=c4
                         .map(ax -> ((OWLObjectAllValuesFrom) ax.getSuperClass()).getFiller())

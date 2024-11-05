@@ -47,6 +47,6 @@ public class EID implements Anti_Pattern {
 
     @Override
     public String getName() {
-        return null;
+        return "EID";
     }
 }

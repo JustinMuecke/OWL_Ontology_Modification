@@ -12,14 +12,14 @@ public class OILWPI implements Anti_Pattern {
     private final Random randomPicker;
     private final OWLDataFactory dataFactory;
 
-    public OILWPI(Random randomPicker, OWLDataFactory dataFactory) {
+    public OILWPI() {
+        randomPicker = new Random();
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-        this.randomPicker = randomPicker;
-        this.dataFactory = dataFactory;
+        dataFactory = manager.getOWLDataFactory();
     }
 
     /**
-     * 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∀𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3, 𝐷𝑖𝑠𝑗 (𝑐2, 𝑐3)
+     * R1 ⊑ R2, c1 ⊑ ∀R1.c2, c1 ⊑ ∀R2.c3, Disj (c2, c3)
      * @param ontology
      * @return
      */
@@ -31,7 +31,7 @@ public class OILWPI implements Anti_Pattern {
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
             OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
             OWLObjectPropertyExpression r2 = subPropertyAxiom.getSuperProperty();
-            // 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∀𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3, -> 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3)
+            // R1 ⊑ R2, c1 ⊑ ∀R1.c2, c1 ⊑ ∀R2.c3, -> Disj(c2, c3)
             Set<OWLSubClassOfAxiom> subClassOfAxiomSet = ontology.axioms(AxiomType.SUBCLASS_OF)
                         .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
                         .filter(ax -> ((OWLObjectAllValuesFrom)ax.getSuperClass()).getProperty().equals(r1)
@@ -52,7 +52,7 @@ public class OILWPI implements Anti_Pattern {
                     );
                 }
             }
-            // 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∀𝑅1.𝑐2, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) -> 𝑐1 ⊑ ∀𝑅2.𝑐3,
+            // R1 ⊑ R2, c1 ⊑ ∀R1.c2, Disj(c2, c3) -> c1 ⊑ ∀R2.c3,
             for(OWLDisjointClassesAxiom disjointClassesAxiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)){
                 Set<OWLClassExpression> disjointClasses = disjointClassesAxiom.getClassExpressions();
                 ontology.axioms(AxiomType.SUBCLASS_OF)
@@ -77,7 +77,7 @@ public class OILWPI implements Anti_Pattern {
 
             }
         }
-        //  if 𝑐1 ⊑ ∀𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) in ontology -> insert 𝑅1 ⊑ 𝑅2
+        //  if c1 ⊑ ∀R1.c2, c1 ⊑ ∀R2.c3, Disj(c2, c3) in ontology -> insert R1 ⊑ R2
         Set<OWLClass> classes = ontology.classesInSignature().collect(HashSet::new, Set::add, Set::addAll);
         for (OWLClass c1 : classes) {
             Set<OWLClassExpression> allValuesFromRestrictions = new HashSet<>();
@@ -108,7 +108,7 @@ public class OILWPI implements Anti_Pattern {
                 for (OWLDisjointClassesAxiom disjointAxiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)) {
                     if (disjointAxiom.contains(c2) && disjointAxiom.contains(c3)) {
                         // Print inferred role subsumption R1 ⊑ R2
-                        possibleInjections.add(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2))
+                        possibleInjections.add(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2));
                     }
                 }
             }

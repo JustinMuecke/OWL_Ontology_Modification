@@ -12,14 +12,14 @@ public class UE implements Anti_Pattern {
     private final Random randomPicker;
     private final OWLDataFactory dataFactory;
 
-    public UE(Random randomPicker, OWLDataFactory dataFactory) {
-        this.randomPicker = randomPicker;
+    public UE() {
+        randomPicker = new Random();
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-        this.dataFactory = dataFactory;
+        dataFactory = manager.getOWLDataFactory();
     }
 
     /**
-     * Pattern: 𝑐1 ⊑ ∀𝑅.𝑐2, 𝑐1 ⊑ ∃𝑅.𝑐3, 𝐷𝑖𝑠𝑗 (𝑐2,𝑐3)
+     * Pattern: c1 ⊑ ∀R.c2, c1 ⊑ ∃R.c3, Disj (c2,c3)
      * @param ontology
      * @return
      */
@@ -32,7 +32,7 @@ public class UE implements Anti_Pattern {
             if(restrictionAroundC2.getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM)){
                 OWLClassExpression c2 = ((OWLObjectAllValuesFrom) restrictionAroundC2).getFiller();
 
-                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∃𝑅.𝑐3 and disjoin c3,c2
+                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∃R.c3 and disjoin c3,c2
                 Set<OWLObjectSomeValuesFrom> possibleC3 = ontology.axioms(AxiomType.SUBCLASS_OF)
                         .filter(ax -> ax.getSubClass().equals(c1))
                         .map(OWLSubClassOfAxiom::getSuperClass)
@@ -46,7 +46,7 @@ public class UE implements Anti_Pattern {
                         possibleInjections.add(injectableAxiom);
                     }
                 }
-                //Find 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) and add c1 ⊑ ∀𝑅.c3.
+                //Find Disj(c2, c3) and add c1 ⊑ ∀R.c3.
                 Set<OWLClassExpression> possibleDisjoints = ontology.axioms(AxiomType.DISJOINT_CLASSES)
                         .filter(ax-> ax.getClassExpressions().contains(c2))
                         .map(ax -> {

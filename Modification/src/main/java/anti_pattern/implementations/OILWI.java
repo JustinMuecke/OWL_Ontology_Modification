@@ -20,14 +20,14 @@ public class OILWI implements Anti_Pattern {
     }
 
     /**
-     * 𝑐1⊑𝑐2, 𝑐1⊑∀𝑅.𝑐3, 𝑐2⊑∀𝑅.𝑐4, 𝐷𝑖𝑠𝑗(𝑐3, 𝑐4)
+     * c1⊑c2, c1⊑∀R.c3, c2⊑∀R.c4, Disj(c3, c4)
      * @param ontology ontology on which to perform search
      * @return the Axiom which can be injected into the ontology if found, else it Optional.empty
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new ArrayList<>();
-        //a1: 𝑐1⊑𝑐2, a2: 𝑐1⊑∀𝑅.𝑐3, a3: 𝑐2⊑∀𝑅.𝑐4 in ontology -> insert 𝐷𝑖𝑠𝑗(c3,c4)
+        //a1: c1⊑c2, a2: c1⊑∀R.c3, a3: c2⊑∀R.c4 in ontology -> insert Disj(c3,c4)
 
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
@@ -50,8 +50,8 @@ public class OILWI implements Anti_Pattern {
                 break;
             }
         }
-        //a1: 𝑐1⊑𝑐2, a2.1: 𝑐1⊑∀𝑅.𝑐3, a3: 𝐷𝑖𝑠𝑗(c3,c4) in ontology -> insert 𝑐2⊑∀𝑅.𝑐4
-        //           a2.2: 𝑐2⊑∀𝑅.𝑐4                              -> insert 𝑐1⊑∀𝑅.𝑐3
+        //a1: c1⊑c2, a2.1: c1⊑∀R.c3, a3: Disj(c3,c4) in ontology -> insert c2⊑∀R.c4
+        //           a2.2: c2⊑∀R.c4                              -> insert c1⊑∀R.c3
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
             OWLClassExpression c2 = axiom.getSuperClass();
@@ -64,7 +64,7 @@ public class OILWI implements Anti_Pattern {
             }
 
         }
-        // 𝑐1⊑∀𝑅.𝑐3, 𝑐2⊑∀𝑅.𝑐4, 𝐷𝑖𝑠𝑗(𝑐3, 𝑐4) in ontology -> insert 𝑐1⊑𝑐2
+        // c1⊑∀R.c3, c2⊑∀R.c4, Disj(c3, c4) in ontology -> insert c1⊑c2
         for (OWLDisjointClassesAxiom axiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)) {
             Set<OWLClassExpression> classes = axiom.getClassExpressions();
             Stream<OWLSubClassOfAxiom> axiomStream = ontology.axioms(AxiomType.SUBCLASS_OF)

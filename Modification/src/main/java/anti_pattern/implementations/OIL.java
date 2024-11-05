@@ -17,7 +17,7 @@ public class OIL implements Anti_Pattern {
     }
 
     /**
-     * c1 ⊑ ∀R.c2, c1 ⊑ ∀𝑅.c3, 𝐷𝑖𝑠𝑗 (𝑐2, 𝑐3)
+     * c1 ⊑ ∀R.c2, c1 ⊑ ∀R.c3, Disj (c2, c3)
      * @param ontology ontology on which to perform search
      * @return the Axiom which can be injected into the ontology if found, else it Optional.empty
      */
@@ -30,7 +30,7 @@ public class OIL implements Anti_Pattern {
             if(restrictionAroundC2.getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM)){
                 OWLClassExpression c2 = ((OWLObjectAllValuesFrom) restrictionAroundC2).getFiller();
 
-                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∀𝑅.c3 and disjoin c3,c2
+                //Find  c1 ⊑ ∀R.c2, c1 ⊑ ∀R.c3 and disjoin c3,c2
                 Set<OWLObjectAllValuesFrom> possibleC3 = ontology.axioms(AxiomType.SUBCLASS_OF)
                         .filter(ax -> ax.getSubClass().equals(c1))
                         .map(OWLSubClassOfAxiom::getSuperClass)
@@ -44,7 +44,7 @@ public class OIL implements Anti_Pattern {
                         possibleInjections.add(injectableAxiom);
                     }
                 }
-                //Find 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) and add c1 ⊑ ∀𝑅.c3.
+                //Find Disj(c2, c3) and add c1 ⊑ ∀R.c3.
                 Set<OWLClassExpression> possibleDisjoints = ontology.axioms(AxiomType.DISJOINT_CLASSES)
                         .filter(ax-> ax.getClassExpressions().contains(c2))
                         .map(ax -> {

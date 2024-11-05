@@ -2,41 +2,238 @@ package anti_pattern.implementations;
 
 import anti_pattern.Anti_Pattern;
 import org.semanticweb.owlapi.apibinding.OWLManager;
-import org.semanticweb.owlapi.model.OWLAxiom;
-import org.semanticweb.owlapi.model.OWLDataFactory;
-import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.model.*;
 
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class UEWPI implements Anti_Pattern {
     private final Random randomPicker;
     private final OWLDataFactory dataFactory;
 
-    public UEWPI(Random randomPicker, OWLDataFactory dataFactory) {
+    public UEWPI() {
+        randomPicker = new Random();
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-        this.randomPicker = randomPicker;
-        this.dataFactory = dataFactory;
+        dataFactory = manager.getOWLDataFactory();
     }
 
     /**
-     * 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∃𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3)
+     * R1 ⊑ R2, c1 ⊑ ∃R1.c2, c1 ⊑ ∀R2.c3, Disj(c2, c3)
      * @param ontology
      * @return
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
-        // 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∃𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3 in ontology -> insert 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3)
+        List<OWLAxiom> possibleInjections = new ArrayList<>();
 
-        // 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∃𝑅1.𝑐2, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) in ontology -> insert 𝑐1 ⊑ ∀𝑅2.𝑐3
+        possibleInjections.addAll(findInjectableDisjointClassAxioms(ontology));
+        possibleInjections.addAll(findInjectableSubClassAxiomsWithForAllRestriction(ontology));
+        possibleInjections.addAll(findInjectableSubClassAxiomsWithExistsRestriction(ontology));
+        possibleInjections.addAll(findInjectableSubPropertyAxioms(ontology));
 
-        // 𝑅1 ⊑ 𝑅2, 𝑐1 ⊑ ∀𝑅2.𝑐3, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) in ontology -> insert 𝑐1 ⊑ ∃𝑅1.𝑐2
+        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+    }
 
-        // 𝑐1 ⊑ ∃𝑅1.𝑐2, 𝑐1 ⊑ ∀𝑅2.𝑐3, 𝐷𝑖𝑠𝑗(𝑐2, 𝑐3) in ontology -> insert 𝑅1 ⊑ 𝑅2
+    /**
+     * R1 ⊑ R2, c1 ⊑ ∃R1.c2, c1 ⊑ ∀R2.c3 in ontology -> insert Disj(c2, c3)
+     * @param ontology
+     * @return
+     */
+    private Set<OWLDisjointClassesAxiom> findInjectableDisjointClassAxioms(OWLOntology ontology){
+        Set<OWLDisjointClassesAxiom> injectableAxioms = new HashSet<>();
+
+        Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
+        for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
+            OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
+            OWLObjectPropertyExpression r2 = subPropertyAxiom.getSuperProperty();
+            // Find c1 -> need c that appears in c1 ⊑ ∃ structure and c1 ⊑ ∀ structure
+            // existsSubClasses c1 ⊑ ∃R1
+            Set<OWLClassExpression> existsSubClasses = ontology.axioms(AxiomType.SUBCLASS_OF)
+                    .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
+                    .filter(ax -> ((OWLObjectSomeValuesFrom)ax.getSuperClass()).getProperty().equals(r1))
+                    .map(OWLSubClassOfAxiom::getSubClass)
+                    .collect(Collectors.toSet());
+            // forAllSubClasses c1 ⊑ ∀R2
+            Set<OWLClassExpression> forAllSubClass = ontology.axioms(AxiomType.SUBCLASS_OF)
+                    .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
+                    .filter(ax -> ((OWLObjectSomeValuesFrom)ax.getSuperClass()).getProperty().equals(r2))
+                    .map(OWLSubClassOfAxiom::getSubClass)
+                    .collect(Collectors.toSet());
+            Set<OWLClassExpression> c1Candidates = new HashSet<>(existsSubClasses);
+            c1Candidates.retainAll(forAllSubClass);
+            // find c2 and c3
+            for(OWLClassExpression c1 : c1Candidates){
+                OWLClassExpression c2 = null, c3 = null;
+                for (OWLSubClassOfAxiom subClassAxiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
+                    if(!subClassAxiom.getSubClass().equals(c1)) continue;
+                    OWLClassExpression superClass = subClassAxiom.getSuperClass();
+                    if (superClass instanceof OWLObjectSomeValuesFrom someValuesFrom && someValuesFrom.getProperty().equals(r1)){
+                            c2 = someValuesFrom.getFiller();
+                        }
+
+                    if (superClass instanceof OWLObjectAllValuesFrom allValuesFrom && allValuesFrom.getProperty().equals(r2)){
+                            c3 = allValuesFrom.getFiller();
+                        }
+
+                }
+                if(c2 != null && c3 != null && !c2.equals(c3)){
+                    injectableAxioms.add(dataFactory.getOWLDisjointClassesAxiom(c2,c3));
+                }
 
 
-        return Optional.empty();
+            }
+        }
+
+
+        return injectableAxioms;
+    }
+
+    /**
+     * R1 ⊑ R2, c1 ⊑ ∃R1.c2, Disj(c2, c3) in ontology -> insert c1 ⊑ ∀R2.c3
+     * @param ontology
+     * @return
+     */
+    private Set<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithForAllRestriction(OWLOntology ontology){
+        Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
+
+        Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
+        for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
+            OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
+            OWLObjectPropertyExpression r2 = subPropertyAxiom.getSuperProperty();
+
+            //find Axioms of the form ... ⊑ ∃R1 ...
+            Stream<OWLSubClassOfAxiom> subClassOfExistsRestriction = ontology.axioms(AxiomType.SUBCLASS_OF)
+                    .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
+                    .filter(ax -> ((OWLObjectSomeValuesFrom) ax.getSuperClass()).getProperty().equals(r1));
+            Set<OWLClassExpression> c1Candidates = subClassOfExistsRestriction.map(OWLSubClassOfAxiom::getSubClass).collect(Collectors.toSet());
+
+            for(OWLClassExpression c1 : c1Candidates){
+                OWLClassExpression c2 = null;
+                for (OWLSubClassOfAxiom subClassAxiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
+                    if(!subClassAxiom.getSubClass().equals(c1)) continue;
+                    OWLClassExpression superClass = subClassAxiom.getSuperClass();
+                    if (superClass instanceof OWLObjectSomeValuesFrom someValuesFrom && someValuesFrom.getProperty().equals(r1)){
+                        c2 = someValuesFrom.getFiller();
+                        OWLClassExpression finalC = c2;
+                        Set<OWLClassExpression> c3Candidates = ontology.axioms(AxiomType.DISJOINT_CLASSES)
+                                .map(OWLNaryClassAxiom::getClassExpressions)
+                                .filter(classExpressions -> classExpressions.contains(finalC))
+                                .reduce(new HashSet<>(), (acc, val) -> {
+                                    acc.addAll(val);
+                                    return acc;
+                                });
+                        if(c3Candidates.isEmpty()) continue;
+                        for(OWLClassExpression c3 : c3Candidates){
+                            if(c3.equals(c1)) continue;
+                            injectableAxioms.add(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectAllValuesFrom(r2,c3)));
+                        }
+                    }
+                    }
+                }
+            }
+        return injectableAxioms;
+    }
+
+    /**
+     * R1 ⊑ R2, c1 ⊑ ∀R2.c3, Disj(c2, c3) in ontology -> insert c1 ⊑ ∃R1.c2
+     * @param ontology
+     * @return
+     */
+    private Set<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithExistsRestriction(OWLOntology ontology){
+        Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
+
+        Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
+        for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
+            OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
+            OWLObjectPropertyExpression r2 = subPropertyAxiom.getSuperProperty();
+
+            //find Axioms of the form ... ⊑ ∀R2 ...
+            Stream<OWLSubClassOfAxiom> subClassOfExistsRestriction = ontology.axioms(AxiomType.SUBCLASS_OF)
+                    .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
+                    .filter(ax -> ((OWLObjectSomeValuesFrom) ax.getSuperClass()).getProperty().equals(r2));
+            Set<OWLClassExpression> c1Candidates = subClassOfExistsRestriction.map(OWLSubClassOfAxiom::getSubClass).collect(Collectors.toSet());
+
+            for(OWLClassExpression c1 : c1Candidates){
+                OWLClassExpression c2 = null;
+                for (OWLSubClassOfAxiom subClassAxiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
+                    if(!subClassAxiom.getSubClass().equals(c1)) continue;
+                    OWLClassExpression superClass = subClassAxiom.getSuperClass();
+                    if (superClass instanceof OWLObjectSomeValuesFrom someValuesFrom && someValuesFrom.getProperty().equals(r2)){
+                        c2 = someValuesFrom.getFiller();
+                        OWLClassExpression finalC = c2;
+                        Set<OWLClassExpression> c3Candidates = ontology.axioms(AxiomType.DISJOINT_CLASSES)
+                                .map(OWLNaryClassAxiom::getClassExpressions)
+                                .filter(classExpressions -> classExpressions.contains(finalC))
+                                .reduce(new HashSet<>(), (acc, val) -> {
+                                    acc.addAll(val);
+                                    return acc;
+                                });
+                        if(c3Candidates.isEmpty()) continue;
+                        for(OWLClassExpression c3 : c3Candidates){
+                            if(c3.equals(c1)) continue;
+                            injectableAxioms.add(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectSomeValuesFrom(r2,c3)));
+                        }
+                    }
+                }
+            }
+        }
+        return injectableAxioms;
+    }
+
+    /**
+     * c1 ⊑ ∃R1.c2, c1 ⊑ ∀R2.c3, Disj(c2, c3) in ontology -> insert R1 ⊑ R2
+     * @param ontology
+     * @return
+     */
+    private Set<OWLSubObjectPropertyOfAxiom> findInjectableSubPropertyAxioms(OWLOntology ontology){
+        Set<OWLSubObjectPropertyOfAxiom> injectableAxioms = new HashSet<>();
+        // find all classes that are subclass to a restriction
+        // existsSubClasses c1 ⊑ ∃
+        Set<OWLClassExpression> existsSubClasses = ontology.axioms(AxiomType.SUBCLASS_OF)
+                .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
+                .map(OWLSubClassOfAxiom::getSubClass)
+                .collect(Collectors.toSet());
+        // forAllSubClasses c1 ⊑ ∀
+        Set<OWLClassExpression> forAllSubClass = ontology.axioms(AxiomType.SUBCLASS_OF)
+                .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
+                .map(OWLSubClassOfAxiom::getSubClass)
+                .collect(Collectors.toSet());
+        Set<OWLClassExpression> c1Candidates = new HashSet<>(existsSubClasses);
+        c1Candidates.retainAll(forAllSubClass);
+
+        // Iterate over them and see if we can find the relations r1 and r2
+        for(OWLClassExpression c1 : c1Candidates){
+            OWLClassExpression c2 = null, c3 = null;
+            OWLObjectPropertyExpression r1 = null, r2 = null;
+            //Find c2
+            for (OWLSubClassOfAxiom subClassAxiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
+                if (!subClassAxiom.getSubClass().equals(c1)) continue;
+                OWLClassExpression superClass = subClassAxiom.getSuperClass();
+                if (superClass instanceof OWLObjectSomeValuesFrom someValuesFrom) {
+                    c2 = someValuesFrom.getFiller();
+                    r1 = someValuesFrom.getProperty();
+                }
+                if (superClass instanceof OWLObjectAllValuesFrom allValuesFrom) {
+                    c3 = allValuesFrom.getFiller();
+                    r2 = allValuesFrom.getProperty();
+                }
+                if (c3 != null && c2 != null) {
+                    OWLClassExpression finalC = c2;
+                    OWLClassExpression finalC1 = c3;
+                    if (ontology.axioms(AxiomType.DISJOINT_CLASSES)
+                            .map(axiom ->
+                                    axiom.getClassExpressions().contains(finalC)
+                                            && axiom.getClassExpressions().contains(finalC1))
+                            .reduce(false, (acc, val) -> acc || val)
+                    ) {
+                        injectableAxioms.add(dataFactory.getOWLSubObjectPropertyOfAxiom(r1, r2));
+                    }
+
+                }
+            }
+        }
+        return injectableAxioms;
     }
 
     @Override
