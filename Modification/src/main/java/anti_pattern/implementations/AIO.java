@@ -15,13 +15,13 @@ public class AIO implements Anti_Pattern {
         dataFactory = manager.getOWLDataFactory();
     }
     /**
-     * Pattern : c1 ⊑ ∃R.(c2 ⊓ c3), 𝐷𝑖𝑠𝑗(c2, c3)
+     *
      */
 
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new LinkedList<>();
-        // If 𝐷𝑖𝑠𝑗(c2, c3) is in the ontology and c1 ⊑ ∃R.c2, add c1 ⊑ ∃R.(c2 ⊓ c3)
+        // If Disj(c2, c3) is in the ontology and c1 ⊑ ∃R.c2, add c1 ⊑ ∃R.(c2 ⊓ c3)
         Set<OWLDisjointClassesAxiom> disjointClassesAxiomSet = ontology.getAxioms(AxiomType.DISJOINT_CLASSES);
         for(OWLDisjointClassesAxiom disjointClassesAxiom : disjointClassesAxiomSet){
 
@@ -45,20 +45,15 @@ public class AIO implements Anti_Pattern {
                     .findFirst();
             if(injectionAxiom.isEmpty()) continue;
 
-                        // If such an axiom exists, create a new axiom c1 ⊑ ∃R.(c2 ⊓ c3)
             OWLClassExpression c1 = injectionAxiom.get().getSubClass();
             OWLObjectSomeValuesFrom someValuesFrom = (OWLObjectSomeValuesFrom) injectionAxiom.get().getSuperClass();
             OWLObjectPropertyExpression property = someValuesFrom.getProperty();
-            // Create the intersection c2 ⊓ c3
             OWLObjectIntersectionOf intersection = dataFactory.getOWLObjectIntersectionOf(c2, c3);
-            // Create the new existential restriction ∃R.(c2 ⊓ c3)
             OWLObjectSomeValuesFrom newSomeValuesFrom = dataFactory.getOWLObjectSomeValuesFrom(property, intersection);
-            // Create the new subclass axiom c1 ⊑ ∃R.(c2 ⊓ c3)
             OWLSubClassOfAxiom newAxiom = dataFactory.getOWLSubClassOfAxiom(c1, newSomeValuesFrom);
             possibleInjections.add(newAxiom);
         }
 
-        // If c1 ⊑ ∃R.(c2 ⊓ c3) is in the ontology, add 𝐷𝑖𝑠𝑗(c2, c3)
         Set<OWLSubClassOfAxiom> subClassOfAxiomSet = ontology.getAxioms(AxiomType.SUBCLASS_OF);
         for(OWLSubClassOfAxiom subClassOfAxiom : subClassOfAxiomSet){
             OWLClassExpression superClass = subClassOfAxiom.getSuperClass();

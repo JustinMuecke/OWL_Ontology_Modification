@@ -1,0 +1,10 @@
+
+f	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Š”£¼
+k	java:S117&"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ƒ’ì¼ùÿÿÿÿ
+k	java:S117<"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ƒ’ì¼ùÿÿÿÿ
+f
+java:S1612"PReplace this lambda with method reference 'OWLObjectSomeValuesFrom.class::cast'.(Œü‹ž
+j
+java:S1612)"OReplace this lambda with method reference 'OWLObjectAllValuesFrom.class::cast'.(œÏÉåýÿÿÿÿ
+j
+java:S1612?"OReplace this lambda with method reference 'OWLObjectAllValuesFrom.class::cast'.(œÏÉåýÿÿÿÿ

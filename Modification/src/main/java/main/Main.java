@@ -32,63 +32,59 @@ public class Main {
             ));
 
     public static void main(String[] args) {
-        File[] dir = new File(INPUT_PATH).listFiles();
+
+
+    }
+
+    private static OWLOntology loadOntology(File file, OWLOntologyManager manager){
+        File parsingError = new File("output/parsing.csv");
+        OWLOntology ontology = null;
+        try {
+            ontology = manager.loadOntologyFromOntologyDocument(file);
+        } catch (Exception e) {
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(parsingError))) {
+                bw.write(file.getName());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        return ontology;
+    }
+    public static String executeInjection(String filepath){
+        OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         File outputDir = new File (OUTPUT_PATH);
-        File parsing_error = new File("output/parsing.csv");
-
-        if(!outputDir.exists()){
-            outputDir.mkdirs();
+        File file = new File(filepath);
+        OWLOntology ontology = loadOntology(file, manager);
+        if(ontology == null) return "";
+        possibleInjections = new HashMap<>();
+        for(Anti_Pattern pattern : consideredAntiPattern){
+            System.out.println(pattern.getName());
+            Optional<OWLAxiom> injectablePattern = pattern.checkForPossiblePatternCompletion(ontology);
+            System.out.println(injectablePattern.toString());
+            injectablePattern.ifPresent(owlAxiom -> possibleInjections.put(pattern.getName(), owlAxiom));
         }
-        System.out.println(System.getProperty("user.dir"));
-        for(File file : dir){
-            if(file.getName().equals(".gitkeep")) continue;
-            OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-            OWLOntology ontology = null;
-            try {
-                ontology = manager.loadOntologyFromOntologyDocument(file);
-            } catch (Exception e) {
-                try (BufferedWriter bw = new BufferedWriter(new FileWriter(parsing_error))) {
-                    bw.write(file.getName());
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-            if (ontology == null) continue;
-
-
-            possibleInjections = new HashMap<>();
-            for(Anti_Pattern pattern : consideredAntiPattern){
-                System.out.println(pattern.getName());
-                Optional<OWLAxiom> injectablePattern = pattern.checkForPossiblePatternCompletion(ontology);
-                System.out.println(injectablePattern.toString());
-                if(injectablePattern.isPresent()) {
-                    possibleInjections.put(pattern.getName(), injectablePattern.get());
-                }
-            }
-            if(possibleInjections.isEmpty()) continue;
-            // Pick one possible Injection Randomly and apply to ontology.
-            List<String> patterns = possibleInjections.keySet().stream().toList();
-            String chosenPattern = "";
-            if(patterns.size()>1) {
-                int randomIndex = new Random().nextInt(patterns.size());
-                chosenPattern = patterns.get(randomIndex);
-            }
-            else{
-                chosenPattern = patterns.get(0);
-            }
-            // Inject Chosen Axiom into Ontology
-            OWLAxiom injectionAxiom = possibleInjections.get(chosenPattern);
-            manager.addAxiom(ontology, injectionAxiom);
-            try {
-                manager.saveOntology(ontology, IRI.create(new File(outputDir, chosenPattern + "_"+file.getName()+"_").toURI()));
-                System.out.println("Successfully saved Ontology: " + file.getName());
-            }
-            catch(OWLOntologyStorageException storageException){
-                System.err.println("Failed to save ontology: " + file.getName() + " due to " + storageException.getMessage());
-            }
-            break;
+        if(possibleInjections.isEmpty()) return "";
+        // Pick one possible Injection Randomly and apply to ontology.
+        List<String> patterns = possibleInjections.keySet().stream().toList();
+        String chosenPattern = "";
+        if(patterns.size()>1) {
+            int randomIndex = new Random().nextInt(patterns.size());
+            chosenPattern = patterns.get(randomIndex);
         }
-
-
+        else{
+            chosenPattern = patterns.get(0);
+        }
+        // Inject Chosen Axiom into Ontology
+        OWLAxiom injectionAxiom = possibleInjections.get(chosenPattern);
+        manager.addAxiom(ontology, injectionAxiom);
+        try {
+            manager.saveOntology(ontology, IRI.create(new File(outputDir, chosenPattern + "_"+file.getName()).toURI()));
+            System.out.println("Successfully saved Ontology: " + file.getName());
+            return chosenPattern + "_" + file.getName();
+        }
+        catch(OWLOntologyStorageException storageException){
+            System.err.println("Failed to save ontology: " + file.getName() + " due to " + storageException.getMessage());
+            return "";
+        }
     }
 }

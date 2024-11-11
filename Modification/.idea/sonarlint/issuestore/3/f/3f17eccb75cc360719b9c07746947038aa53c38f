@@ -1,0 +1,15 @@
+
+j
+java:S2189#""Add an end condition to this loop.(˜ïˆÿÿÿÿÿ8Ò±‹Ş±2J$6346ed50-6fd0-476b-98a5-841b4968b28e
+
+java:S2095"EUse try-with-resources or close this "Channel" in a "finally" clause.(‡î‰´ûÿÿÿÿ8ÅÛ‡Ş±2J$58e62069-4d50-49d4-8d61-1af87db16cc6
+ˆ
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(ù›‹à8àğ‡Ş±2J$743c0303-4070-4079-b7b1-a94b401a1961
+ˆ
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(˜®‰8àğ‡Ş±2J$a2cf78cb-76ce-4ff5-8704-f2b79454a0de
+
+java:S1124"EReorder the modifiers to comply with the Java Language Specification.(Ñ÷Ë úÿÿÿÿ8àğ‡Ş±2J$5964de7a-41d8-4c85-bf0d-dd165dd2c464
+¡
+java:S2142&"^Either re-interrupt this method or rethrow the "InterruptedException" that can be caught here.(”ı¾8Ëú™Ş±2J$ec1b0b27-c3aa-455c-bb9e-e92dceaca89e
+m	java:S106"+Replace this use of System.out by a logger.(¿Ô½Ÿ8ÿØ™Ş±2J$2fd25efe-5b20-4963-9eaa-abebfebc29a5
+r	java:S106"+Replace this use of System.err by a logger.(©ŠÒ‚şÿÿÿÿ8ÿØ™Ş±2J$7afcefeb-9554-477e-95f8-80737d8e5003
