@@ -80,7 +80,7 @@ public class Util {
     }
 
     /**
-     * Given an ontology and a subclass of a Pattern 𝑐1⊑∀𝑅.𝑐3, returns all possible class expression c3
+     * Given an ontology and a subclass of a Pattern c1⊑∀R.c3, returns all possible class expression c3
      * @param ontology provided Ontology
      * @param subClass1 subclass c1
      * @param subClass2 subclass c2, which cant be equal to c3
@@ -95,7 +95,7 @@ public class Util {
                 .collect(Collectors.toSet());
     }
     /**
-     * Given an ontology and a subclass of a Pattern 𝑐1⊑∃𝑅.𝑐3, returns all possible class expression c3
+     * Given an ontology and a subclass of a Pattern c1⊑∃R.c3, returns all possible class expression c3
      * @param ontology provided Ontology
      * @param subClass1 subclass c1
      * @param subClass2 subclass c2, which cant be equal to c3

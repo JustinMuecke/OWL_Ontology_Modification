@@ -110,6 +110,6 @@ public class UEWI2 implements Anti_Pattern {
 
     @Override
     public String getName() {
-        return "";
+        return "UEWI2";
     }
 }

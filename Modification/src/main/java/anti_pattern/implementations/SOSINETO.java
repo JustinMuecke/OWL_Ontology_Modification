@@ -88,6 +88,6 @@ public class SOSINETO implements Anti_Pattern {
 
     @Override
     public String getName() {
-        return "";
+        return "SOSINETO";
     }
 }

@@ -97,6 +97,6 @@ public class OILWI implements Anti_Pattern {
 
     @Override
     public String getName() {
-        return "";
+        return "OILWI";
     }
 }
