@@ -147,6 +147,6 @@ public class UEWIP implements Anti_Pattern {
 
     @Override
     public String getName() {
-        return "";
+        return "UEWIP";
     }
 }
