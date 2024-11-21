@@ -21,7 +21,6 @@ public class UEWI2 implements Anti_Pattern {
 
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
-        List<OWLAxiom> possibleInjections = new ArrayList<>();
         //a1: c1⊑c2, a2: c1⊑∀R.c3, a3: c2⊑∀R.c4 in ontology -> insert Disj(c3,c4)
 
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
@@ -34,15 +33,8 @@ public class UEWI2 implements Anti_Pattern {
                 Set<OWLClassExpression> possibleC4 = Util.findFillersOfObjectAllValuesFromAxioms(ontology, c1, c2);
 
                 if (!(possibleC3.isEmpty() && possibleC4.isEmpty())) {
-                    possibleC3.forEach(
-                            c3 -> {
-                                possibleC4.forEach(
-                                        c4 -> possibleInjections.add(dataFactory.getOWLDisjointClassesAxiom(c3, c4))
-                                );
-                            }
-                    );
+                    return Optional.of(dataFactory.getOWLDisjointClassesAxiom(possibleC3.iterator().next(), possibleC4.iterator().next()));
                 }
-                break;
             }
         }
         //a1: c1⊑c2, a2.1: c1⊑∀R.c3, a3: Disj(c3,c4) in ontology -> insert c2⊑∃R.c4
@@ -52,10 +44,11 @@ public class UEWI2 implements Anti_Pattern {
             OWLClassExpression c2 = axiom.getSuperClass();
             if (c1.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)
                     && c2.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)) {
-                //a2.1
-                Util.findPossibleInjectionBasedOnSubClassAxiomWithSomeRestriction(ontology,possibleInjections,c2, c1, dataFactory);
+                Optional<OWLSubClassOfAxiom> possibleInjection = Util.findPossibleInjectionBasedOnSubClassAxiomWithSomeRestriction(ontology,c2, c1, dataFactory);
+                if(possibleInjection.isPresent()) return Optional.of(possibleInjection.get());
                 //a2.2
-                Util.findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(ontology, possibleInjections, c1, c2,dataFactory);
+                possibleInjection = Util.findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(ontology, c1, c2,dataFactory);
+                if(possibleInjection.isPresent()) return Optional.of(possibleInjection.get());
             }
         }
         // c1 ⊑ ∃R.c3, c2 ⊑ ∀R.c4, Disj (c3, c4) in ontology -> insert c1⊑c2
@@ -89,12 +82,12 @@ public class UEWI2 implements Anti_Pattern {
                         .map(cls -> dataFactory.getOWLSubClassOfAxiom(c3, cls))
                         .collect(Collectors.toSet());
                 if (!foundPattern.isEmpty()) {
-                    possibleInjections.addAll(foundPattern);
+                    return Optional.of(foundPattern.iterator().next());
                 }
             }
 
         }
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        return Optional.empty();
     }
 
 

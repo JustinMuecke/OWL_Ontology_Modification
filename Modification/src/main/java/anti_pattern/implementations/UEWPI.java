@@ -25,14 +25,18 @@ public class UEWPI implements Anti_Pattern {
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
-        List<OWLAxiom> possibleInjections = new ArrayList<>();
 
-        possibleInjections.addAll(findInjectableDisjointClassAxioms(ontology));
-        possibleInjections.addAll(findInjectableSubClassAxiomsWithForAllRestriction(ontology));
-        possibleInjections.addAll(findInjectableSubClassAxiomsWithExistsRestriction(ontology));
-        possibleInjections.addAll(findInjectableSubPropertyAxioms(ontology));
+        Optional<OWLDisjointClassesAxiom> disjointResutl = findInjectableDisjointClassAxioms(ontology);
+        if(disjointResutl.isPresent()) return Optional.of(disjointResutl.get());
+        Optional<OWLSubClassOfAxiom> subClassResult = findInjectableSubClassAxiomsWithForAllRestriction(ontology);
+        if(subClassResult.isPresent()) return Optional.of(subClassResult.get());
+        Optional<OWLSubClassOfAxiom> subClassResult2 = findInjectableSubClassAxiomsWithExistsRestriction(ontology);
+        if(subClassResult2.isPresent()) return Optional.of(subClassResult2.get());
 
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        Optional<OWLSubObjectPropertyOfAxiom> propertyResult=findInjectableSubPropertyAxioms(ontology);
+        if(propertyResult.isPresent()) return Optional.of(propertyResult.get());
+
+        return Optional.empty();
     }
 
     /**
@@ -40,8 +44,7 @@ public class UEWPI implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLDisjointClassesAxiom> findInjectableDisjointClassAxioms(OWLOntology ontology){
-        Set<OWLDisjointClassesAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLDisjointClassesAxiom> findInjectableDisjointClassAxioms(OWLOntology ontology){
 
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
@@ -78,7 +81,7 @@ public class UEWPI implements Anti_Pattern {
 
                 }
                 if(c2 != null && c3 != null && !c2.equals(c3)){
-                    injectableAxioms.add(dataFactory.getOWLDisjointClassesAxiom(c2,c3));
+                    return Optional.of(dataFactory.getOWLDisjointClassesAxiom(c2,c3));
                 }
 
 
@@ -86,7 +89,7 @@ public class UEWPI implements Anti_Pattern {
         }
 
 
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     /**
@@ -94,8 +97,7 @@ public class UEWPI implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithForAllRestriction(OWLOntology ontology){
-        Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithForAllRestriction(OWLOntology ontology){
 
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
@@ -126,13 +128,13 @@ public class UEWPI implements Anti_Pattern {
                         if(c3Candidates.isEmpty()) continue;
                         for(OWLClassExpression c3 : c3Candidates){
                             if(c3.equals(c1)) continue;
-                            injectableAxioms.add(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectAllValuesFrom(r2,c3)));
+                            return Optional.of(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectAllValuesFrom(r2,c3)));
                         }
                     }
                     }
                 }
             }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     /**
@@ -140,8 +142,7 @@ public class UEWPI implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithExistsRestriction(OWLOntology ontology){
-        Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithExistsRestriction(OWLOntology ontology){
 
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
@@ -172,13 +173,13 @@ public class UEWPI implements Anti_Pattern {
                         if(c3Candidates.isEmpty()) continue;
                         for(OWLClassExpression c3 : c3Candidates){
                             if(c3.equals(c1)) continue;
-                            injectableAxioms.add(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectSomeValuesFrom(r2,c3)));
+                            return Optional.of(dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectSomeValuesFrom(r2,c3)));
                         }
                     }
                 }
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     /**
@@ -186,8 +187,7 @@ public class UEWPI implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLSubObjectPropertyOfAxiom> findInjectableSubPropertyAxioms(OWLOntology ontology){
-        Set<OWLSubObjectPropertyOfAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLSubObjectPropertyOfAxiom> findInjectableSubPropertyAxioms(OWLOntology ontology){
         // find all classes that are subclass to a restriction
         // existsSubClasses c1 ⊑ ∃
         Set<OWLClassExpression> existsSubClasses = ontology.axioms(AxiomType.SUBCLASS_OF)
@@ -227,13 +227,13 @@ public class UEWPI implements Anti_Pattern {
                                             && axiom.getClassExpressions().contains(finalC1))
                             .reduce(false, (acc, val) -> acc || val)
                     ) {
-                        injectableAxioms.add(dataFactory.getOWLSubObjectPropertyOfAxiom(r1, r2));
+                        return Optional.of(dataFactory.getOWLSubObjectPropertyOfAxiom(r1, r2));
                     }
 
                 }
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     @Override

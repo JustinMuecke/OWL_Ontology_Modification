@@ -3,6 +3,7 @@ package anti_pattern;
 import org.semanticweb.owlapi.model.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -11,7 +12,7 @@ public class Util {
     private Util() {
     }
 
-    public static void findPossibleInjectionBasedOnSubClassAxiomWithSomeRestriction(OWLOntology ontology, List<OWLAxiom> possibleInjections, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
+    public static Optional<OWLSubClassOfAxiom> findPossibleInjectionBasedOnSubClassAxiomWithSomeRestriction(OWLOntology ontology, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
         Set<OWLObjectSomeValuesFrom> possibleA2_2 = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSubClass().equals(c2))
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
@@ -24,7 +25,7 @@ public class Util {
                 Set<OWLClassExpression> disjointClasses = disjointClassesAxiom.getClassExpressions();
                 if (disjointClasses.remove(classExpression)) {
                     for (OWLClassExpression c4 : disjointClasses) {
-                        possibleInjections.add(dataFactory.getOWLSubClassOfAxiom(
+                        return Optional.of(dataFactory.getOWLSubClassOfAxiom(
                                 c1,
                                 dataFactory.getOWLObjectAllValuesFrom(property, c4)
                         ));
@@ -32,9 +33,11 @@ public class Util {
                 }
             }
         }
+        return Optional.empty();
+
     }
 
-    public static void findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(OWLOntology ontology, List<OWLAxiom> possibleInjections, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
+    public static Optional<OWLSubClassOfAxiom> findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(OWLOntology ontology, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
         Set<OWLObjectAllValuesFrom> possibleA2_2 = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSubClass().equals(c2))
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
@@ -47,7 +50,7 @@ public class Util {
                 Set<OWLClassExpression> disjointClasses = disjointClassesAxiom.getClassExpressions();
                 if (disjointClasses.remove(classExpression)) {
                     for (OWLClassExpression c4 : disjointClasses) {
-                        possibleInjections.add(dataFactory.getOWLSubClassOfAxiom(
+                        return Optional.of(dataFactory.getOWLSubClassOfAxiom(
                                 c1,
                                 dataFactory.getOWLObjectSomeValuesFrom(property, c4)
                         ));
@@ -55,8 +58,9 @@ public class Util {
                 }
             }
         }
+        return Optional.empty();
     }
-    public static void findPossibleInjectionBasedOnSubClassAxiom(OWLOntology ontology, List<OWLAxiom> possibleInjections, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
+    public static Optional<OWLSubClassOfAxiom> findPossibleInjectionBasedOnSubClassAxiom(OWLOntology ontology, OWLClassExpression c1, OWLClassExpression c2, OWLDataFactory dataFactory) {
         Set<OWLObjectAllValuesFrom> possibleA2_2 = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSubClass().equals(c2))
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
@@ -69,14 +73,16 @@ public class Util {
                 Set<OWLClassExpression> disjointClasses= disjointClassesAxiom.getClassExpressions();
                 if(disjointClasses.remove(classExpression)){
                     for(OWLClassExpression c4 : disjointClasses){
-                        possibleInjections.add(dataFactory.getOWLSubClassOfAxiom(
+                        return Optional.of((dataFactory.getOWLSubClassOfAxiom(
                                 c1,
                                 dataFactory.getOWLObjectAllValuesFrom(property, c4)
-                        ));
+                        )));
                     }
                 }
             }
         }
+        return Optional.empty();
+
     }
 
     /**

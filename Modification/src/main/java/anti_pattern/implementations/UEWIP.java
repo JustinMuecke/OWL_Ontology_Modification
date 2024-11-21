@@ -24,20 +24,19 @@ public class UEWIP implements Anti_Pattern {
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
-        List<OWLAxiom> possibleInjections = new ArrayList<>();
-
-        possibleInjections.addAll(findInjectableInversePropertyAxioms(ontology));
-        possibleInjections.addAll(findInjectableSubClassOfAxioms(ontology));
-        possibleInjections.addAll(findInjectableDisjointClassesAxioms(ontology));
-
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        Optional<OWLInverseObjectPropertiesAxiom> possibleResult = findInjectableInversePropertyAxioms(ontology);
+        if(possibleResult.isPresent()) return Optional.of(possibleResult.get());
+        Optional<OWLSubClassOfAxiom> possibleSubClassOFAxiomInjeciton = findInjectableSubClassOfAxioms(ontology);
+        if(possibleSubClassOFAxiomInjeciton.isPresent()) return Optional.of(possibleSubClassOFAxiomInjeciton.get());
+        Optional<OWLDisjointClassesAxiom> possibleDisjointClassesAxiomInjcetion = findInjectableDisjointClassesAxioms(ontology);
+        if(possibleDisjointClassesAxiomInjcetion.isPresent()) return Optional.of(possibleDisjointClassesAxiomInjcetion.get());
+        return  Optional.empty();
     }
 
     /**
      * c2 ⊑ ∃R1.c1, c1 ⊑ ∀R2.c3 Disj(c2,c3) -> R1=R2^-1
      */
-    private Set<OWLInverseObjectPropertiesAxiom> findInjectableInversePropertyAxioms(OWLOntology ontology){
-        Set<OWLInverseObjectPropertiesAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLInverseObjectPropertiesAxiom> findInjectableInversePropertyAxioms(OWLOntology ontology){
 
         // Find c1 candiates
         for(OWLDisjointClassesAxiom axiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)){
@@ -65,18 +64,18 @@ public class UEWIP implements Anti_Pattern {
                         && classExpressions.contains(allValuesFrom.getFiller())
                         && subClassForAll.getSubClass().equals(c1)){
                     r2 = allValuesFrom.getProperty();
-                    injectableAxioms.add(dataFactory.getOWLInverseObjectPropertiesAxiom(r1, r2));
+                    return Optional.of(dataFactory.getOWLInverseObjectPropertiesAxiom(r1, r2));
                 }
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     /**
      * c2 ⊑ ∃R1.c1, R1 = R2^-1 Disj (c2,c3) -> c1 ⊑ ∀R2.c3,
      * @return
      */
-    private Set<OWLSubClassOfAxiom> findInjectableSubClassOfAxioms(OWLOntology ontology){
+    private Optional<OWLSubClassOfAxiom> findInjectableSubClassOfAxioms(OWLOntology ontology){
         Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
         for(OWLInverseObjectPropertiesAxiom inverseAxiom : ontology.getAxioms(AxiomType.INVERSE_OBJECT_PROPERTIES)){
             OWLObjectPropertyExpression r1 = inverseAxiom.getFirstProperty();
@@ -92,19 +91,17 @@ public class UEWIP implements Anti_Pattern {
                     Set<OWLClassExpression> disjointClasses = disjointClassesAxiom.getClassExpressions();
                     if(disjointClasses.contains(c2)){
                         disjointClasses.remove(c2);
-                        for(OWLClassExpression c3 : disjointClasses){
-                            injectableAxioms.add(
+                        return Optional.of(
                                     dataFactory.getOWLSubClassOfAxiom(
                                             c1,
-                                            dataFactory.getOWLObjectAllValuesFrom(r2,c3)
+                                            dataFactory.getOWLObjectAllValuesFrom(r2,disjointClasses.iterator().next())
                                     )
-                            );
-                        }
+                        );
                     }
                 }
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     /**
@@ -112,8 +109,7 @@ public class UEWIP implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLDisjointClassesAxiom> findInjectableDisjointClassesAxioms(OWLOntology ontology){
-        Set<OWLDisjointClassesAxiom> injectableAxioms = new HashSet<>();
+    private Optional<OWLDisjointClassesAxiom> findInjectableDisjointClassesAxioms(OWLOntology ontology){
         for(OWLInverseObjectPropertiesAxiom inverseAxiom : ontology.getAxioms(AxiomType.INVERSE_OBJECT_PROPERTIES)) {
             OWLObjectPropertyExpression r1 = inverseAxiom.getFirstProperty();
             OWLObjectPropertyExpression r2 = inverseAxiom.getSecondProperty();
@@ -139,10 +135,10 @@ public class UEWIP implements Anti_Pattern {
                 }
             }
             if(c2 != null && c3 != null && !c2.equals(c3)){
-                injectableAxioms.add(dataFactory.getOWLDisjointClassesAxiom(c2,c3));
+                return Optional.of(dataFactory.getOWLDisjointClassesAxiom(c2,c3));
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
     @Override

@@ -51,7 +51,7 @@ public class AIO implements Anti_Pattern {
             OWLObjectIntersectionOf intersection = dataFactory.getOWLObjectIntersectionOf(c2, c3);
             OWLObjectSomeValuesFrom newSomeValuesFrom = dataFactory.getOWLObjectSomeValuesFrom(property, intersection);
             OWLSubClassOfAxiom newAxiom = dataFactory.getOWLSubClassOfAxiom(c1, newSomeValuesFrom);
-            possibleInjections.add(newAxiom);
+            return Optional.of(newAxiom);
         }
 
         Set<OWLSubClassOfAxiom> subClassOfAxiomSet = ontology.getAxioms(AxiomType.SUBCLASS_OF);
@@ -63,12 +63,10 @@ public class AIO implements Anti_Pattern {
             OWLObjectIntersectionOf filler = (OWLObjectIntersectionOf) restriction.getFiller();
             Set<OWLClassExpression> expressionsToBeDisjointed = filler.getOperands();
             OWLDisjointClassesAxiom injectionAxiom = dataFactory.getOWLDisjointClassesAxiom(expressionsToBeDisjointed);
-            possibleInjections.add(injectionAxiom);
+            return Optional.of(injectionAxiom);
         }
 
-        if(possibleInjections.isEmpty()) return Optional.empty();
-        int randomIndex = randomPicker.nextInt(possibleInjections.size());
-        return Optional.of(possibleInjections.get(randomIndex));
+       return Optional.empty();
     }
 
     @Override

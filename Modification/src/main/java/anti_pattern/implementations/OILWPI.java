@@ -45,37 +45,27 @@ public class OILWPI implements Anti_Pattern {
                 Set<OWLClassExpression> possibleC2 = superClasses.stream().filter(ax -> ax.getProperty().equals(r1)).collect(Collectors.toSet());
                 Set<OWLClassExpression> possibleC3 = superClasses.stream().filter(ax -> ax.getProperty().equals(r2)).collect(Collectors.toSet());
                 if(!possibleC2.isEmpty() && !possibleC3.isEmpty()){
-                    possibleC2.forEach(
-                            c2 -> possibleC3.forEach(
-                                    c3 -> possibleInjections.add(dataFactory.getOWLDisjointClassesAxiom(c2, c3))
-                            )
-                    );
+                    return Optional.of(dataFactory.getOWLDisjointClassesAxiom(possibleC2.iterator().next(), possibleC3.iterator().next()));
                 }
             }
             // R1 ⊑ R2, c1 ⊑ ∀R1.c2, Disj(c2, c3) -> c1 ⊑ ∀R2.c3,
-            for(OWLDisjointClassesAxiom disjointClassesAxiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)){
-                Set<OWLClassExpression> disjointClasses = disjointClassesAxiom.getClassExpressions();
-                ontology.axioms(AxiomType.SUBCLASS_OF)
-                        .filter(ax-> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
-                        .filter(ax -> ((OWLObjectAllValuesFrom)ax.getSuperClass()).getProperty().equals(r1))
-                        .filter(ax -> disjointClasses.contains(((OWLObjectAllValuesFrom)ax.getSuperClass()).getFiller()))
-                        .forEach(
-                                ax -> {
-                                    OWLClassExpression c1 = ax.getSubClass();
-                                    OWLClassExpression c2 = ((OWLObjectAllValuesFrom)ax.getSuperClass()).getFiller();
-                                    for(OWLClassExpression c3 : disjointClasses){
-                                        if(!c1.equals(c2) && !c2.equals(c3) && !c1.equals(c3)){
-                                            possibleInjections.add(dataFactory.getOWLSubClassOfAxiom(
-                                                    c1,
-                                                    dataFactory.getOWLObjectAllValuesFrom(r2, c3)
-                                            ));
-                                        }
-                                    }
-                                }
-                        );
+            Optional<OWLSubClassOfAxiom> result = ontology.axioms(AxiomType.SUBCLASS_OF)
+                    .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
+                    .filter(ax -> ((OWLObjectAllValuesFrom) ax.getSuperClass()).getProperty().equals(r1))
+                    .flatMap(ax -> {
+                        OWLClassExpression c1 = ax.getSubClass();
+                        OWLObjectAllValuesFrom allValuesFrom = (OWLObjectAllValuesFrom) ax.getSuperClass();
+                        OWLClassExpression c2 = allValuesFrom.getFiller();
 
+                        return ontology.axioms(AxiomType.DISJOINT_CLASSES)
+                                .filter(disjointClassesAxiom -> disjointClassesAxiom.getClassExpressions().contains(c2))
+                                .flatMap(disjointClassesAxiom -> disjointClassesAxiom.getClassExpressions().stream())
+                                .filter(c3 -> !c1.equals(c2) && !c2.equals(c3) && !c1.equals(c3))
+                                .map(c3 -> dataFactory.getOWLSubClassOfAxiom(c1, dataFactory.getOWLObjectAllValuesFrom(r2, c3)));
+                    })
+                    .findFirst();
 
-            }
+            if(result.isPresent()) return Optional.of(result.get());
         }
         //  if c1 ⊑ ∀R1.c2, c1 ⊑ ∀R2.c3, Disj(c2, c3) in ontology -> insert R1 ⊑ R2
         Set<OWLClass> classes = ontology.classesInSignature().collect(HashSet::new, Set::add, Set::addAll);
@@ -108,13 +98,13 @@ public class OILWPI implements Anti_Pattern {
                 for (OWLDisjointClassesAxiom disjointAxiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)) {
                     if (disjointAxiom.contains(c2) && disjointAxiom.contains(c3)) {
                         // Print inferred role subsumption R1 ⊑ R2
-                        possibleInjections.add(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2));
+                        return Optional.of(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2));
                     }
                 }
             }
         }
 
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        return Optional.empty();
     }
 
     @Override

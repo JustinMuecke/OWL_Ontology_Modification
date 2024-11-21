@@ -41,7 +41,7 @@ public class OIL implements Anti_Pattern {
                 if(!possibleC3.isEmpty()){
                     for(OWLObjectAllValuesFrom c3 : possibleC3){
                         OWLDisjointClassesAxiom injectableAxiom = dataFactory.getOWLDisjointClassesAxiom(c2, c3.getFiller());
-                        possibleInjections.add(injectableAxiom);
+                        return Optional.of(injectableAxiom);
                     }
                 }
                 //Find Disj(c2, c3) and add c1 ⊑ ∀R.c3.
@@ -55,11 +55,11 @@ public class OIL implements Anti_Pattern {
                 for(OWLClassExpression c : possibleDisjoints){
                     OWLObjectAllValuesFrom restriction = dataFactory.getOWLObjectAllValuesFrom(((OWLObjectAllValuesFrom) restrictionAroundC2).getProperty(), c);
                     OWLSubClassOfAxiom injectableAxiom = dataFactory.getOWLSubClassOfAxiom(c1, restriction);
-                    possibleInjections.add(injectableAxiom);
+                    return Optional.of(injectableAxiom);
                 }
             }
         }
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        return Optional.empty();
     }
 
     @Override

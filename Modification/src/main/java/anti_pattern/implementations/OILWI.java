@@ -37,17 +37,11 @@ public class OILWI implements Anti_Pattern {
 
                 Set<OWLClassExpression> possibleC3 = Util.findFillersOfObjectAllValuesFromAxioms(ontology, c1, c2);
                 Set<OWLClassExpression> possibleC4 = Util.findFillersOfObjectAllValuesFromAxioms(ontology, c2, c1);
+                if(possibleC3.isEmpty() && possibleC4.isEmpty()) continue;
+                OWLClassExpression c3 = possibleC3.iterator().next();
+                OWLClassExpression c4 = possibleC4.iterator().next();
+                return Optional.of(dataFactory.getOWLDisjointClassesAxiom(c3,c4));
 
-                if (!(possibleC3.isEmpty() && possibleC4.isEmpty())) {
-                    possibleC3.forEach(
-                            c3 -> {
-                                possibleC4.forEach(
-                                        c4 -> possibleInjections.add(dataFactory.getOWLDisjointClassesAxiom(c3, c4))
-                                );
-                            }
-                    );
-                }
-                break;
             }
         }
         //a1: c1⊑c2, a2.1: c1⊑∀R.c3, a3: Disj(c3,c4) in ontology -> insert c2⊑∀R.c4
@@ -58,9 +52,15 @@ public class OILWI implements Anti_Pattern {
             if (c1.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)
                     && c2.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)) {
                 //a2.1
-                Util.findPossibleInjectionBasedOnSubClassAxiom(ontology, possibleInjections, c2, c1, dataFactory);
+                Optional<OWLSubClassOfAxiom> injection = Util.findPossibleInjectionBasedOnSubClassAxiom(ontology, c2, c1, dataFactory);
+                if (injection.isPresent()) {
+                    return Optional.of(injection.get());
+                }
                 //a2.2
-                Util.findPossibleInjectionBasedOnSubClassAxiom(ontology, possibleInjections, c1, c2, dataFactory);
+                injection = Util.findPossibleInjectionBasedOnSubClassAxiom(ontology, c1, c2, dataFactory);
+                if (injection.isPresent()) {
+                    return Optional.of(injection.get());
+                }
             }
 
         }
@@ -82,12 +82,12 @@ public class OILWI implements Anti_Pattern {
                         .map(cls -> dataFactory.getOWLSubClassOfAxiom(c3, cls))
                         .collect(Collectors.toSet());
                 if (!foundPattern.isEmpty()) {
-                    possibleInjections.addAll(foundPattern);
+                    return Optional.of(foundPattern.stream().iterator().next());
                 }
             }
 
         }
-        return possibleInjections.isEmpty() ? Optional.empty() : Optional.of(possibleInjections.get(randomPicker.nextInt(possibleInjections.size())));
+        return Optional.empty();
     }
 
 

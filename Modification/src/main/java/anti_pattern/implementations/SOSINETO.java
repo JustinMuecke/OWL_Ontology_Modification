@@ -29,6 +29,8 @@ public class SOSINETO implements Anti_Pattern {
      */
     @Override
     public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+        Optional<OWLSubClassOfAxiom> result = findInjectableSubClassOfCardinalityRestraint(ontology);
+        if(result.isPresent()) return Optional.of(result.get());
         return Optional.empty();
     }
 
@@ -38,7 +40,7 @@ public class SOSINETO implements Anti_Pattern {
      * @param ontology
      * @return
      */
-    private Set<OWLSubClassOfAxiom> findInjectableSubClassOfCardinalityRestraint(OWLOntology ontology) {
+    private Optional<OWLSubClassOfAxiom> findInjectableSubClassOfCardinalityRestraint(OWLOntology ontology) {
         Set<OWLSubClassOfAxiom> injectableAxioms = new HashSet<>();
         Set<OWLClassExpression> c1Candidates = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
@@ -75,14 +77,13 @@ public class SOSINETO implements Anti_Pattern {
                                     c1,
                                     dataFactory.getOWLObjectMaxCardinality(1, r)
                             );
-                            injectableAxioms.add(maxCardinalityAxiom);
-                            break;  // Only need one such axiom per `c1` and `r`
+                            return Optional.of(maxCardinalityAxiom);
                         }
                     }
                 }
             }
         }
-        return injectableAxioms;
+        return Optional.empty();
     }
 
 
