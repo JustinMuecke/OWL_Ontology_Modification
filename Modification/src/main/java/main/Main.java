@@ -80,6 +80,7 @@ public class Main {
         }
     }
 
+
     private static DeliverCallback getDeliverCallback(Channel channel, PostgresDB database, Connection connection) {
         Channel finalChannel = channel;
         return (consumerTag, delivery) -> {
@@ -89,47 +90,46 @@ public class Main {
             database.updateStatusInModificationDatabaseStart(filepath);
             System.out.println(filepath +": Execute Injection");
 
-            String newFile = executeInjection(INPUT_PATH + filepath);
-            System.out.println(filepath + ": NEW FILE! " + newFile);
-            if(!newFile.equals("")) {
-                System.out.println(filepath + ": Trying to publish to " + QUEUE_OUTPUT);
-                try {
+            List<String> newFiles = executeInjection(INPUT_PATH + filepath);
+            System.out.println(filepath + ": NEW FILE! " + newFiles);
+            if(!newFiles.isEmpty()) {
+                database.updateStatusInModificationDatabaseEnd(filepath, newFiles);
+                for(String newFile : newFiles){
+                    System.out.println(filepath + ": Trying to publish to " + QUEUE_OUTPUT);
+                    try {
 
-                    System.out.println(finalChannel.toString());
-                    System.out.println("CHANNEL OPEN: " + finalChannel.isOpen());
-                    if(!finalChannel.isOpen()) {
-                        System.out.println("MAKE NEW CHANNEL");
-                        Channel newChannel = connection.createChannel();
-                        newChannel.queueDeclare(QUEUE_INPUT, true, false, false, null);
-                        newChannel.queueDeclare(QUEUE_OUTPUT, true, false, false, null);
-                        System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
-                        newChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
-                        System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
-                    }
-                    else{
-                        finalChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
-                        System.out.println("CHANNEL OPEN AFTER: " + finalChannel.isOpen());
-                    }
+                        System.out.println(finalChannel.toString());
+                        System.out.println("CHANNEL OPEN: " + finalChannel.isOpen());
+                        if(!finalChannel.isOpen()) {
+                            System.out.println("MAKE NEW CHANNEL");
+                            Channel newChannel = connection.createChannel();
+                            newChannel.queueDeclare(QUEUE_INPUT, true, false, false, null);
+                            newChannel.queueDeclare(QUEUE_OUTPUT, true, false, false, null);
+                            System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
+                            newChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
+                            System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
+                        }
+                        else{
+                            finalChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
+                            System.out.println("CHANNEL OPEN AFTER: " + finalChannel.isOpen());
+                        }
 
-                }catch(IOException e){
-                    e.printStackTrace();
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
+                    System.out.println(filepath +": Published");
+                    database.updasteStatusInPreprocessingDatabase(newFile);
+                    System.out.println(filepath +": Database Updated");
                 }
-                System.out.println(filepath +": Published");
-                database.updasteStatusInPreprocessingDatabase(newFile);
-                database.updateStatusInModificationDatabaseEnd(filepath, newFile.split("_")[0]);
-                System.out.println(filepath +": Database Updated");
-
             }
             else{
                 System.out.println(filepath +": Nothing Injected!");
-                database.updateStatusInModificationDatabaseEndError(newFile);
             }
             System.out.println("Received file: " + filepath);
             // Acknowledge the message
             finalChannel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
         };
     }
-
 
     private static OWLOntology loadOntology(File file, OWLOntologyManager manager) {
         OWLOntology ontology = null;
@@ -149,12 +149,13 @@ public class Main {
         }
         return ontology;
     }
-    public static String executeInjection(String filepath){
+    public static List<String> executeInjection(String filepath){
+        List<String> newFiles = new LinkedList<>();
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         File outputDir = new File (OUTPUT_PATH);
         File file = new File(filepath);
         OWLOntology ontology = loadOntology(file, manager);
-        if(ontology == null) return "";
+        if(ontology == null) return newFiles;
         possibleInjections = new HashMap<>();
         System.out.println(filepath +": Checking for pattern");
         for(Anti_Pattern pattern : consideredAntiPattern){
@@ -162,44 +163,34 @@ public class Main {
             Optional<List<OWLAxiom>> injectablePattern = pattern.checkForPossiblePatternCompletion(ontology);
             injectablePattern.ifPresent(owlAxiom -> possibleInjections.put(pattern.getName(), owlAxiom));
         }
-        if(possibleInjections.isEmpty()) return "";
-        System.out.println("Found injectable Patterns for " + file.getName() +": " + possibleInjections.keySet());
-        // Pick one possible Injection Randomly and apply to ontology.
-        List<String> patterns = possibleInjections.keySet().stream().toList();
-        String chosenPattern = "";
-        if(patterns.size()>1) {
-            int randomIndex = new Random().nextInt(patterns.size());
-            chosenPattern = patterns.get(randomIndex);
-        }
-        else{
-            chosenPattern = patterns.get(0);
-        }
-        System.out.println(filepath +": Chosen Pattern = " + chosenPattern);
+        if(possibleInjections.isEmpty()) return newFiles;
+        for (String patternName : possibleInjections.keySet()) {
+            List<OWLAxiom> injectionAxioms = possibleInjections.get(patternName);
 
-        List<OWLAxiom> injectionAxioms = possibleInjections.get(chosenPattern);
-        for(OWLAxiom injectionAxiom : injectionAxioms){
-            manager.addAxiom(ontology, injectionAxiom);
+            // Apply the axiom to the ontology
+            for(OWLAxiom injectionAxiom : injectionAxioms){
+                manager.addAxiom(ontology, injectionAxiom);
+            }
+            // Set RDF/XML format explicitly
+            RDFXMLDocumentFormat format = new RDFXMLDocumentFormat();
+
+            try {
+                // Construct the output file path and save the ontology
+                File outputFile = new File(outputDir, patternName + "_" + injectionAxioms.size() + "_" + file.getName());
+                manager.saveOntology(ontology,
+                        format,
+                        new FileOutputStream(outputFile));
+                newFiles.add(patternName + "_" + file.getName());
+                System.out.println("Successfully saved Ontology with pattern " + patternName + ": " + file.getName());
+            } catch (OWLOntologyStorageException storageException) {
+                System.err.println("Failed to save ontology with pattern " + patternName + ": " + file.getName() + " due to " + storageException.getMessage());
+                storageException.printStackTrace();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
         }
-
-        // Set RDF/XML format explicitly
-        RDFXMLDocumentFormat format = new RDFXMLDocumentFormat();
-
-        try {
-            // Construct the output file path and save the ontology
-            File outputFile = new File(outputDir, chosenPattern+"_" + injectionAxioms.size() + "_" + file.getName());
-            manager.saveOntology(ontology,
-                    new RDFXMLDocumentFormat(),
-                    new FileOutputStream(outputFile));
-
-            System.out.println("Successfully saved Ontology: " + file.getName());
-            return chosenPattern + "_" + file.getName();
-        } catch (OWLOntologyStorageException storageException) {
-            System.err.println("Failed to save ontology: " + file.getName() + " due to " + storageException.getMessage());
-            storageException.printStackTrace();
-            return "";
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return "";
-        }
+        return newFiles;
     }
+
+
 }

@@ -3,6 +3,7 @@ package database;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 public class PostgresDB {
 
@@ -40,13 +41,13 @@ public class PostgresDB {
     }
 
 
-    public void updateStatusInModificationDatabaseEnd(String fileName, String injectedAxiom) {
+    public void updateStatusInModificationDatabaseEnd(String fileName, List<String> injectedAxioms) {
         String updateQuery = "UPDATE modification SET status = ?, injected_axiom=? WHERE file_name = ?";
 
         try (java.sql.Connection dbConnection = DriverManager.getConnection(this.URL, this.POSTGRES_USER, this.POSTGRES_PASSWORD);
              PreparedStatement statement = dbConnection.prepareStatement(updateQuery)) {
             statement.setString(1, "Done");
-            statement.setString(2, injectedAxiom);
+            statement.setString(2, injectedAxioms.toString());
             statement.setString(3, fileName);
             statement.executeUpdate();
         } catch (SQLException e) {
@@ -54,6 +55,7 @@ public class PostgresDB {
             System.err.println("Error logging to the database");
         }
     }
+
 
     public void updasteStatusInPreprocessingDatabase(String fileName){
         String insertQuery = "INSERT INTO preprocessing (file_name, status, consistent) VALUES (?, ?, ?)";
