@@ -24,17 +24,17 @@ public class UEWPI implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
 
         Optional<OWLDisjointClassesAxiom> disjointResutl = findInjectableDisjointClassAxioms(ontology);
-        if(disjointResutl.isPresent()) return Optional.of(disjointResutl.get());
+        if(disjointResutl.isPresent()) return Optional.of(List.of(disjointResutl.get()));
         Optional<OWLSubClassOfAxiom> subClassResult = findInjectableSubClassAxiomsWithForAllRestriction(ontology);
-        if(subClassResult.isPresent()) return Optional.of(subClassResult.get());
+        if(subClassResult.isPresent()) return Optional.of(List.of(subClassResult.get()));
         Optional<OWLSubClassOfAxiom> subClassResult2 = findInjectableSubClassAxiomsWithExistsRestriction(ontology);
-        if(subClassResult2.isPresent()) return Optional.of(subClassResult2.get());
+        if(subClassResult2.isPresent()) return Optional.of(List.of(subClassResult2.get()));
 
         Optional<OWLSubObjectPropertyOfAxiom> propertyResult=findInjectableSubPropertyAxioms(ontology);
-        if(propertyResult.isPresent()) return Optional.of(propertyResult.get());
+        if(propertyResult.isPresent()) return Optional.of(List.of(propertyResult.get()));
 
         return Optional.empty();
     }

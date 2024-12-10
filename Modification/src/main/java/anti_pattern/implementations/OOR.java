@@ -4,27 +4,31 @@ import anti_pattern.Anti_Pattern;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-public class OOD implements Anti_Pattern {
-
+public class OOR implements Anti_Pattern {
+    private final Random randomPicker;
     private final OWLDataFactory dataFactory;
     private final OWLOntologyManager manager;
-    public OOD() {
+
+    public OOR() {
+        this.randomPicker = new Random();
         this.manager = OWLManager.createOWLOntologyManager();
         this.dataFactory = manager.getOWLDataFactory();
     }
-
     /**
-     * Pattern:  c1 = 𝐷𝑜𝑚𝑎𝑖𝑛(𝑝), 𝑝(𝑎, 𝑏, c), 𝑎∈𝑐2, 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2)
+     * Pattern:  c1 = Range(𝑝), 𝑝(o, s), s∈𝑐2, 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2)
      * O
      * @param ontology
      * @return
      */
     @Override
     public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
-        Optional<OWLObjectPropertyDomainAxiom> possibleDomainInjection = findInjectableDomainAxiom(ontology, manager);
+        Optional<OWLObjectPropertyRangeAxiom> possibleDomainInjection = findInjectableRangeAxiom(ontology, this.manager);
         if(possibleDomainInjection.isPresent()) return Optional.of(List.of(possibleDomainInjection.get()));
 
         Optional<OWLDisjointClassesAxiom> possibleDisjointClassesInjection = findInjectableDisjointClassesAxiom(ontology, manager);
@@ -38,24 +42,22 @@ public class OOD implements Anti_Pattern {
         return Optional.empty();
     }
 
-
-
-
     /**
-     * c1 = 𝐷𝑜𝑚𝑎𝑖𝑛(𝑝), o∈𝑐2, 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2) in Ontology -> Return  p(o, p, s)
+     * Pattern:  c1 = Range(𝑝), 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2), s∈𝑐2 -> return 𝑝(o, s)
+     * O
      * @param ontology
      * @param manager
      * @return
      */
     private Optional<OWLObjectPropertyAssertionAxiom> findInjectableObjectPropertyAssertionAxiom(OWLOntology ontology, OWLOntologyManager manager){
-        Set<OWLObjectPropertyDomainAxiom> domainAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_DOMAIN);
-        if(domainAxiomSet.isEmpty()) return Optional.empty();
+        Set<OWLObjectPropertyRangeAxiom> rangeAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_RANGE);
+        if(rangeAxiomSet.isEmpty()) return Optional.empty();
         Set<OWLDisjointClassesAxiom> disjointClassesAxiomSet = ontology.getAxioms(AxiomType.DISJOINT_CLASSES);
         if(disjointClassesAxiomSet.isEmpty()) return Optional.empty();
 
-        for(OWLObjectPropertyDomainAxiom domainAxiom: domainAxiomSet){
-            OWLClassExpression possibleC1 = domainAxiom.getDomain();
-            OWLObjectPropertyExpression possibleP = domainAxiom.getProperty();
+        for(OWLObjectPropertyRangeAxiom rangeAxiom: rangeAxiomSet){
+            OWLClassExpression possibleC1 = rangeAxiom.getRange();
+            OWLObjectPropertyExpression possibleP = rangeAxiom.getProperty();
             Set<OWLDisjointClassesAxiom> possibleDisjointClassesAxioms = disjointClassesAxiomSet.stream().filter(ax -> ax.getClassExpressions().contains(possibleC1)).collect(Collectors.toSet());
 
             for(OWLDisjointClassesAxiom disjointClassesAxiom : possibleDisjointClassesAxioms){
@@ -64,72 +66,74 @@ public class OOD implements Anti_Pattern {
                 if(possibleC2s.isEmpty()) continue;
 
                 OWLClassExpression c2 = possibleC2s.stream().findFirst().get();
-                Set<OWLNamedIndividual> possibleAs = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax-> ax.getIndividual().isOWLNamedIndividual())
+                Set<OWLNamedIndividual> possibleSubjects = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax-> ax.getIndividual().isOWLNamedIndividual())
                         .filter(ax -> ax.getClassExpression().equals(c2))
                         .map(ax -> ax.getIndividual().asOWLNamedIndividual())
                         .collect(Collectors.toSet());
-                if(possibleAs.isEmpty()) continue;
-                return Optional.of(manager.getOWLDataFactory().getOWLObjectPropertyAssertionAxiom( possibleP,possibleAs.iterator().next(), ontology.individualsInSignature().findFirst().get()));
+                if(possibleSubjects.isEmpty()) continue;
+                return Optional.of(manager.getOWLDataFactory().getOWLObjectPropertyAssertionAxiom( possibleP, ontology.individualsInSignature().findFirst().get(), possibleSubjects.iterator().next()));
             }
 
         }
         return Optional.empty();
     }
 
-
     /**
-     * c1 = 𝐷𝑜𝑚𝑎𝑖𝑛(𝑝), p(o, p, s), 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2) in Ontology -> Return o∈𝑐2
+     * Pattern:  c1 = Range(𝑝), 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2), 𝑝(o, s) -> return s∈𝑐2
+     * O
      * @param ontology
      * @param manager
      * @return
      */
     private Optional<OWLClassAssertionAxiom> findInjectableClassAssertionAxiom(OWLOntology ontology, OWLOntologyManager manager){
-        Set<OWLObjectPropertyDomainAxiom> domainAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_DOMAIN);
-        if(domainAxiomSet.isEmpty()) return Optional.empty();
+        Set<OWLObjectPropertyRangeAxiom> rangeAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_RANGE);
+        if(rangeAxiomSet.isEmpty()) return Optional.empty();
         Set<OWLObjectPropertyAssertionAxiom> propertyAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_ASSERTION);
         if(propertyAxiomSet.isEmpty()) return Optional.empty();
 
-        for(OWLObjectPropertyDomainAxiom propertyDomainAxiom : domainAxiomSet){
-            OWLClassExpression possibleC1 = propertyDomainAxiom.getDomain();
+        for(OWLObjectPropertyRangeAxiom propertyDomainAxiom : rangeAxiomSet){
+            OWLClassExpression possibleC1 = propertyDomainAxiom.getRange();
             OWLObjectPropertyExpression possibleProperty = propertyDomainAxiom.getProperty();
             Set<OWLObjectPropertyAssertionAxiom> propertyAssertionAxioms = ontology.axioms(AxiomType.OBJECT_PROPERTY_ASSERTION).filter(ax -> ax.getProperty().equals(possibleProperty)).collect(Collectors.toSet());
             if(propertyAssertionAxioms.isEmpty()) continue;
+
             Set<OWLDisjointClassesAxiom> disjointClassesAxioms = ontology.axioms(AxiomType.DISJOINT_CLASSES).filter(ax -> ax.getClassExpressions().contains(possibleC1)).collect(Collectors.toSet());
             if(disjointClassesAxioms.isEmpty()) continue;
+
             for(OWLDisjointClassesAxiom disjointClassesAxiom : disjointClassesAxioms){
                 Set<OWLClassExpression> possibleC2s = disjointClassesAxiom.getClassExpressions();
                 possibleC2s.remove(possibleC1);
                 if(possibleC2s.isEmpty()) continue;
                 OWLClassExpression possibleC2 = possibleC2s.iterator().next();
-                OWLNamedIndividual object = propertyAssertionAxioms.stream().findFirst().get().getObject().asOWLNamedIndividual();
-                return Optional.of(manager.getOWLDataFactory().getOWLClassAssertionAxiom(possibleC2, object));
+                OWLNamedIndividual subject = propertyAssertionAxioms.stream().findFirst().get().getSubject().asOWLNamedIndividual();
+                return Optional.of(manager.getOWLDataFactory().getOWLClassAssertionAxiom(possibleC2, subject));
             }
         }
         return Optional.empty();
     }
 
-
     /**
-     * c1 = 𝐷𝑜𝑚𝑎𝑖𝑛(𝑝), p(o, p, s), o∈𝑐2 in Ontology -> Return 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2)
+     * Pattern:  c1 = Range(𝑝), s∈𝑐2, 𝑝(o, s) -> return 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2)
+     * O
      * @param ontology
      * @param manager
      * @return
      */
     private Optional<OWLDisjointClassesAxiom> findInjectableDisjointClassesAxiom(OWLOntology ontology, OWLOntologyManager manager){
-        Set<OWLObjectPropertyDomainAxiom> domainAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_DOMAIN);
-        if(domainAxiomSet.isEmpty()) return Optional.empty();
+        Set<OWLObjectPropertyRangeAxiom> rangeAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_RANGE);
+        if(rangeAxiomSet.isEmpty()) return Optional.empty();
         Set<OWLObjectPropertyAssertionAxiom> propertyAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_ASSERTION);
         if(propertyAxiomSet.isEmpty()) return Optional.empty();
 
-        for(OWLObjectPropertyDomainAxiom propertyDomainAxiom : domainAxiomSet){
+        for(OWLObjectPropertyRangeAxiom propertyDomainAxiom : rangeAxiomSet){
             OWLObjectPropertyExpression possibleProperty = propertyDomainAxiom.getProperty();
-            OWLClassExpression possibleC1 = propertyDomainAxiom.getDomain();
+            OWLClassExpression possibleC1 = propertyDomainAxiom.getRange();
             Set<OWLObjectPropertyAssertionAxiom> possibleRelevantPropertyAssertion = propertyAxiomSet.stream().filter(assertionAxiom -> assertionAxiom.getProperty().equals(possibleProperty)).collect(Collectors.toSet());
             if(possibleRelevantPropertyAssertion.isEmpty()) continue;
 
             for(OWLObjectPropertyAssertionAxiom propertyAssertionAxiom : possibleRelevantPropertyAssertion){
-                OWLNamedIndividual possibleA = propertyAssertionAxiom.getObject().asOWLNamedIndividual();
-                Set<OWLClassExpression> possibleC2 = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax -> ax.getIndividual().equals(possibleA)).map(OWLClassAssertionAxiom::getClassExpression).collect(Collectors.toSet());
+                OWLNamedIndividual possibleSubject = propertyAssertionAxiom.getSubject().asOWLNamedIndividual();
+                Set<OWLClassExpression> possibleC2 = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax -> ax.getIndividual().equals(possibleSubject)).map(OWLClassAssertionAxiom::getClassExpression).collect(Collectors.toSet());
                 if(possibleC2.isEmpty()) continue;
                 return Optional.of(manager.getOWLDataFactory().getOWLDisjointClassesAxiom(possibleC1, possibleC2.iterator().next()));
             }
@@ -137,20 +141,21 @@ public class OOD implements Anti_Pattern {
         return Optional.empty();
     }
     /**
-     * 𝐷𝑖𝑠𝑗(𝑐1, 𝑐2), p(o, p, s), o∈𝑐2 in Ontology -> Return c1 = 𝐷𝑜𝑚𝑎𝑖𝑛(𝑝),
+     * Pattern:  𝐷𝑖𝑠𝑗(𝑐1, 𝑐2), s∈𝑐2, 𝑝(o, s) -> return c1 = Range(𝑝)
+     * O
      * @param ontology
      * @param manager
      * @return
      */
-    private Optional<OWLObjectPropertyDomainAxiom> findInjectableDomainAxiom(OWLOntology ontology, OWLOntologyManager manager){
+    private Optional<OWLObjectPropertyRangeAxiom> findInjectableRangeAxiom(OWLOntology ontology, OWLOntologyManager manager){
         Set<OWLObjectPropertyAssertionAxiom> propertyAxiomSet = ontology.getAxioms(AxiomType.OBJECT_PROPERTY_ASSERTION);
         if(propertyAxiomSet.isEmpty()) return Optional.empty();
 
         for(OWLObjectPropertyAssertionAxiom propertyAssertionAxiom : propertyAxiomSet){
             OWLObjectProperty property = propertyAssertionAxiom.getProperty().asOWLObjectProperty();
-            OWLNamedIndividual individual =propertyAssertionAxiom.getObject().asOWLNamedIndividual();
+            OWLNamedIndividual subject =propertyAssertionAxiom.getSubject().asOWLNamedIndividual();
 
-            Set<OWLClassExpression> possibleC2 = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax -> ax.getIndividual().equals(individual)).map(OWLClassAssertionAxiom::getClassExpression).collect(Collectors.toSet());
+            Set<OWLClassExpression> possibleC2 = ontology.axioms(AxiomType.CLASS_ASSERTION).filter(ax -> ax.getIndividual().equals(subject)).map(OWLClassAssertionAxiom::getClassExpression).collect(Collectors.toSet());
             if(possibleC2.isEmpty()) continue;
             Optional<OWLDisjointClassesAxiom> disjointClassesAxiomOpt = ontology.axioms(AxiomType.DISJOINT_CLASSES)
                     .filter(ax -> ax.getClassExpressions().stream().anyMatch(possibleC2::contains))
@@ -160,14 +165,16 @@ public class OOD implements Anti_Pattern {
             OWLDisjointClassesAxiom disjointClassesAxiom = disjointClassesAxiomOpt.get();
             for(OWLClassExpression classExpression: disjointClassesAxiom.getClassExpressions()){
                 if(!possibleC2.contains(classExpression)){
-                    return Optional.of(manager.getOWLDataFactory().getOWLObjectPropertyDomainAxiom(property, classExpression));
+                    return Optional.of(manager.getOWLDataFactory().getOWLObjectPropertyRangeAxiom(property, classExpression));
                 }
             }
         }
         return Optional.empty();
     }
+
+
     @Override
     public String getName() {
-        return "OOD";
+        return "OOR";
     }
 }

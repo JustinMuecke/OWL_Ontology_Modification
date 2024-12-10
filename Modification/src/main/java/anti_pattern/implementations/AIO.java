@@ -19,7 +19,7 @@ public class AIO implements Anti_Pattern {
      */
 
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new LinkedList<>();
         // If Disj(c2, c3) is in the ontology and c1 ⊑ ∃R.c2, add c1 ⊑ ∃R.(c2 ⊓ c3)
         Set<OWLDisjointClassesAxiom> disjointClassesAxiomSet = ontology.getAxioms(AxiomType.DISJOINT_CLASSES);
@@ -51,7 +51,7 @@ public class AIO implements Anti_Pattern {
             OWLObjectIntersectionOf intersection = dataFactory.getOWLObjectIntersectionOf(c2, c3);
             OWLObjectSomeValuesFrom newSomeValuesFrom = dataFactory.getOWLObjectSomeValuesFrom(property, intersection);
             OWLSubClassOfAxiom newAxiom = dataFactory.getOWLSubClassOfAxiom(c1, newSomeValuesFrom);
-            return Optional.of(newAxiom);
+            return Optional.of(List.of(newAxiom));
         }
 
         Set<OWLSubClassOfAxiom> subClassOfAxiomSet = ontology.getAxioms(AxiomType.SUBCLASS_OF);
@@ -63,7 +63,7 @@ public class AIO implements Anti_Pattern {
             OWLObjectIntersectionOf filler = (OWLObjectIntersectionOf) restriction.getFiller();
             Set<OWLClassExpression> expressionsToBeDisjointed = filler.getOperands();
             OWLDisjointClassesAxiom injectionAxiom = dataFactory.getOWLDisjointClassesAxiom(expressionsToBeDisjointed);
-            return Optional.of(injectionAxiom);
+            return Optional.of(List.of(injectionAxiom));
         }
 
        return Optional.empty();

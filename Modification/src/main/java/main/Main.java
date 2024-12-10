@@ -26,7 +26,7 @@ public class Main {
     private static final String QUEUE_OUTPUT = "Modules_Preprocess";
     private final static String INPUT_PATH = "/input/";
     private final static String OUTPUT_PATH = "/output/";
-    private static HashMap<String, OWLAxiom> possibleInjections;
+    private static HashMap<String, List<OWLAxiom>> possibleInjections;
     private static final List<Anti_Pattern> consideredAntiPattern = new LinkedList<>(List.of(
             new EID(),
             new AIO(),
@@ -159,7 +159,7 @@ public class Main {
         System.out.println(filepath +": Checking for pattern");
         for(Anti_Pattern pattern : consideredAntiPattern){
             System.out.println("Checking " + pattern.getName());
-            Optional<OWLAxiom> injectablePattern = pattern.checkForPossiblePatternCompletion(ontology);
+            Optional<List<OWLAxiom>> injectablePattern = pattern.checkForPossiblePatternCompletion(ontology);
             injectablePattern.ifPresent(owlAxiom -> possibleInjections.put(pattern.getName(), owlAxiom));
         }
         if(possibleInjections.isEmpty()) return "";
@@ -176,15 +176,17 @@ public class Main {
         }
         System.out.println(filepath +": Chosen Pattern = " + chosenPattern);
 
-        OWLAxiom injectionAxiom = possibleInjections.get(chosenPattern);
-        manager.addAxiom(ontology, injectionAxiom);
+        List<OWLAxiom> injectionAxioms = possibleInjections.get(chosenPattern);
+        for(OWLAxiom injectionAxiom : injectionAxioms){
+            manager.addAxiom(ontology, injectionAxiom);
+        }
 
         // Set RDF/XML format explicitly
         RDFXMLDocumentFormat format = new RDFXMLDocumentFormat();
 
         try {
             // Construct the output file path and save the ontology
-            File outputFile = new File(outputDir, chosenPattern + "_" + file.getName());
+            File outputFile = new File(outputDir, chosenPattern+"_" + injectionAxioms.size() + "_" + file.getName());
             manager.saveOntology(ontology,
                     new RDFXMLDocumentFormat(),
                     new FileOutputStream(outputFile));

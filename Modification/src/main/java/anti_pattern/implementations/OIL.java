@@ -22,7 +22,7 @@ public class OIL implements Anti_Pattern {
      * @return the Axiom which can be injected into the ontology if found, else it Optional.empty
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new LinkedList<>();
         for(OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
@@ -41,7 +41,7 @@ public class OIL implements Anti_Pattern {
                 if(!possibleC3.isEmpty()){
                     for(OWLObjectAllValuesFrom c3 : possibleC3){
                         OWLDisjointClassesAxiom injectableAxiom = dataFactory.getOWLDisjointClassesAxiom(c2, c3.getFiller());
-                        return Optional.of(injectableAxiom);
+                        return Optional.of(List.of(injectableAxiom));
                     }
                 }
                 //Find Disj(c2, c3) and add c1 ⊑ ∀R.c3.
@@ -55,7 +55,7 @@ public class OIL implements Anti_Pattern {
                 for(OWLClassExpression c : possibleDisjoints){
                     OWLObjectAllValuesFrom restriction = dataFactory.getOWLObjectAllValuesFrom(((OWLObjectAllValuesFrom) restrictionAroundC2).getProperty(), c);
                     OWLSubClassOfAxiom injectableAxiom = dataFactory.getOWLSubClassOfAxiom(c1, restriction);
-                    return Optional.of(injectableAxiom);
+                    return Optional.of(List.of(injectableAxiom));
                 }
             }
         }

@@ -24,7 +24,7 @@ public class EID implements Anti_Pattern {
      * @return Either the axiom which makes the ontology inconsistent if injected or an empty optional
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLEquivalentClassesAxiom> equivalentClassesAxiomList = ontology.getAxioms(AxiomType.EQUIVALENT_CLASSES).stream().toList();
         List<OWLDisjointClassesAxiom> disjointClassesAxiomList = ontology.getAxioms(AxiomType.DISJOINT_CLASSES).stream().toList();
         if(equivalentClassesAxiomList.isEmpty() && disjointClassesAxiomList.isEmpty()) return Optional.empty();
@@ -36,13 +36,13 @@ public class EID implements Anti_Pattern {
             OWLEquivalentClassesAxiom equivalentClassesAxiom = equivalentClassesAxiomList.get(randomIndex);
             OWLClassExpression[] classesInAxiom = equivalentClassesAxiom.getClassExpressions().toArray(new OWLClassExpression[0]);
             OWLDisjointClassesAxiom disjointClassesAxiom = dataFactory.getOWLDisjointClassesAxiom(classesInAxiom[0], classesInAxiom[1]);
-            return Optional.of(disjointClassesAxiom);
+            return Optional.of(List.of(disjointClassesAxiom));
         }
         int randomIndex=randomPicker.nextInt(disjointClassesAxiomList.size());
         OWLDisjointClassesAxiom disjointClassesAxiom = disjointClassesAxiomList.get(randomIndex);
         OWLClassExpression[] classesInAxiom = disjointClassesAxiom.getClassExpressions().toArray(new OWLClassExpression[0]);
         OWLEquivalentClassesAxiom equivalentClassesAxiom = dataFactory.getOWLEquivalentClassesAxiom(classesInAxiom[0], classesInAxiom[1]);
-        return Optional.of(equivalentClassesAxiom);
+        return Optional.of(List.of(equivalentClassesAxiom));
     }
 
     @Override

@@ -24,7 +24,7 @@ public class UEWI1 implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         //a1: c1⊑c2, a2: c1⊑∀R.c3, a3: c2⊑∀R.c4 in ontology -> insert Disj(c3,c4)
 
         for (OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
@@ -37,7 +37,7 @@ public class UEWI1 implements Anti_Pattern {
                 Set<OWLClassExpression> possibleC4 = Util.findFillersOfObjectAllValuesFromAxioms(ontology, c2, c1);
 
                 if (!(possibleC3.isEmpty() && possibleC4.isEmpty())) {
-                    return Optional.of(dataFactory.getOWLDisjointClassesAxiom(possibleC3.iterator().next(), possibleC4.iterator().next()));
+                    return Optional.of(List.of(dataFactory.getOWLDisjointClassesAxiom(possibleC3.iterator().next(), possibleC4.iterator().next())));
                 }
             }
         }
@@ -50,10 +50,10 @@ public class UEWI1 implements Anti_Pattern {
                     && c2.getClassExpressionType().equals(ClassExpressionType.OWL_CLASS)) {
                 //a2.1
                 Optional<OWLSubClassOfAxiom> possibleInjection = Util.findPossibleInjectionBasedOnSubClassAxiomWithSomeRestriction(ontology,c1, c2, dataFactory);
-                if(possibleInjection.isPresent()) return Optional.of(possibleInjection.get());
+                if(possibleInjection.isPresent()) return Optional.of(List.of(possibleInjection.get()));
                 //a2.2
                 possibleInjection = Util.findPossibleInjectionBasedOnSubClassAxiomWithAllRestriction(ontology, c2, c1,dataFactory);
-                if(possibleInjection.isPresent()) return Optional.of(possibleInjection.get());
+                if(possibleInjection.isPresent()) return Optional.of(List.of(possibleInjection.get()));
 
             }
         }
@@ -88,7 +88,7 @@ public class UEWI1 implements Anti_Pattern {
                         .map(cls -> dataFactory.getOWLSubClassOfAxiom(c3, cls))
                         .collect(Collectors.toSet());
                 if (!foundPattern.isEmpty()) {
-                    return Optional.of(foundPattern.iterator().next());
+                    return Optional.of(List.of(foundPattern.iterator().next()));
                 }
             }
 

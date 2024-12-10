@@ -4,10 +4,7 @@ import anti_pattern.Anti_Pattern;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SOSINETO implements Anti_Pattern {
@@ -28,9 +25,9 @@ public class SOSINETO implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         Optional<OWLSubClassOfAxiom> result = findInjectableSubClassOfCardinalityRestraint(ontology);
-        if(result.isPresent()) return Optional.of(result.get());
+        if(result.isPresent()) return Optional.of(List.of(result.get()));
         return Optional.empty();
     }
 

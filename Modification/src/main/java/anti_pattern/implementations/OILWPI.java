@@ -24,7 +24,7 @@ public class OILWPI implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         List<OWLAxiom> possibleInjections = new ArrayList<>();
 
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
@@ -45,7 +45,7 @@ public class OILWPI implements Anti_Pattern {
                 Set<OWLClassExpression> possibleC2 = superClasses.stream().filter(ax -> ax.getProperty().equals(r1)).collect(Collectors.toSet());
                 Set<OWLClassExpression> possibleC3 = superClasses.stream().filter(ax -> ax.getProperty().equals(r2)).collect(Collectors.toSet());
                 if(!possibleC2.isEmpty() && !possibleC3.isEmpty()){
-                    return Optional.of(dataFactory.getOWLDisjointClassesAxiom(possibleC2.iterator().next(), possibleC3.iterator().next()));
+                    return Optional.of(List.of(dataFactory.getOWLDisjointClassesAxiom(possibleC2.iterator().next(), possibleC3.iterator().next())));
                 }
             }
             // R1 ⊑ R2, c1 ⊑ ∀R1.c2, Disj(c2, c3) -> c1 ⊑ ∀R2.c3,
@@ -65,7 +65,7 @@ public class OILWPI implements Anti_Pattern {
                     })
                     .findFirst();
 
-            if(result.isPresent()) return Optional.of(result.get());
+            if(result.isPresent()) return Optional.of(List.of(result.get()));
         }
         //  if c1 ⊑ ∀R1.c2, c1 ⊑ ∀R2.c3, Disj(c2, c3) in ontology -> insert R1 ⊑ R2
         Set<OWLClass> classes = ontology.classesInSignature().collect(HashSet::new, Set::add, Set::addAll);
@@ -98,7 +98,7 @@ public class OILWPI implements Anti_Pattern {
                 for (OWLDisjointClassesAxiom disjointAxiom : ontology.getAxioms(AxiomType.DISJOINT_CLASSES)) {
                     if (disjointAxiom.contains(c2) && disjointAxiom.contains(c3)) {
                         // Print inferred role subsumption R1 ⊑ R2
-                        return Optional.of(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2));
+                        return Optional.of(List.of(dataFactory.getOWLSubObjectPropertyOfAxiom(r1,r2)));
                     }
                 }
             }

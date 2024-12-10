@@ -23,13 +23,13 @@ public class UEWIP implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         Optional<OWLInverseObjectPropertiesAxiom> possibleResult = findInjectableInversePropertyAxioms(ontology);
-        if(possibleResult.isPresent()) return Optional.of(possibleResult.get());
+        if(possibleResult.isPresent()) return Optional.of(List.of(possibleResult.get()));
         Optional<OWLSubClassOfAxiom> possibleSubClassOFAxiomInjeciton = findInjectableSubClassOfAxioms(ontology);
-        if(possibleSubClassOFAxiomInjeciton.isPresent()) return Optional.of(possibleSubClassOFAxiomInjeciton.get());
+        if(possibleSubClassOFAxiomInjeciton.isPresent()) return Optional.of(List.of(possibleSubClassOFAxiomInjeciton.get()));
         Optional<OWLDisjointClassesAxiom> possibleDisjointClassesAxiomInjcetion = findInjectableDisjointClassesAxioms(ontology);
-        if(possibleDisjointClassesAxiomInjcetion.isPresent()) return Optional.of(possibleDisjointClassesAxiomInjcetion.get());
+        if(possibleDisjointClassesAxiomInjcetion.isPresent()) return Optional.of(List.of(possibleDisjointClassesAxiomInjcetion.get()));
         return  Optional.empty();
     }
 

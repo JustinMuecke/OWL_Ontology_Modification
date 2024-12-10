@@ -24,7 +24,7 @@ public class UE implements Anti_Pattern {
      * @return
      */
     @Override
-    public Optional<OWLAxiom> checkForPossiblePatternCompletion(OWLOntology ontology) {
+    public Optional<List<OWLAxiom>> checkForPossiblePatternCompletion(OWLOntology ontology) {
         for(OWLSubClassOfAxiom axiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
             OWLClassExpression c1 = axiom.getSubClass();
             OWLClassExpression restrictionAroundC2 = axiom.getSuperClass();
@@ -42,7 +42,7 @@ public class UE implements Anti_Pattern {
                 if(!possibleC3.isEmpty()){
                     for(OWLObjectSomeValuesFrom c3 : possibleC3){
                         OWLDisjointClassesAxiom injectableAxiom = dataFactory.getOWLDisjointClassesAxiom(c2, c3.getFiller());
-                        return Optional.of(injectableAxiom);
+                        return Optional.of(List.of(injectableAxiom));
                     }
                 }
                 //Find Disj(c2, c3) and add c1 ⊑ ∀R.c3.
@@ -56,7 +56,7 @@ public class UE implements Anti_Pattern {
                 for(OWLClassExpression c : possibleDisjoints){
                     OWLObjectSomeValuesFrom restriction = dataFactory.getOWLObjectSomeValuesFrom(((OWLObjectAllValuesFrom) restrictionAroundC2).getProperty(), c);
                     OWLSubClassOfAxiom injectableAxiom = dataFactory.getOWLSubClassOfAxiom(c1, restriction);
-                    return Optional.of(injectableAxiom);
+                    return Optional.of(List.of(injectableAxiom));
                 }
             }
         }

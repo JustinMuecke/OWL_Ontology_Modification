@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '8.1.1' // or the latest version
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'org.example'
@@ -12,7 +12,7 @@ repositories {
     mavenCentral()
 }
 jar {
-    archiveFileName = 'Modification.jar'  // Make sure this matches the file you're expecting
+    archiveFileName = 'Modification.jar'
     manifest {
         attributes(
                 'Main-Class': 'main.Main'
@@ -24,7 +24,7 @@ shadowJar {
     archiveFileName = 'Modification.jar'
     manifest {
         attributes(
-                'Main-Class': 'main.Main'  // Replace with the correct main class
+                'Main-Class': 'main.Main'
         )
     }
 }
