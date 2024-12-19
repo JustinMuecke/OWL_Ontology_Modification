@@ -1,6 +1,7 @@
 package anti_pattern.implementations;
 
 import anti_pattern.Anti_Pattern;
+import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 
 import java.util.List;
@@ -11,9 +12,11 @@ import java.util.stream.Collectors;
 public class CSC implements Anti_Pattern {
 
     private final OWLDataFactory dataFactory;
+    private final OWLOntologyManager manager;
 
-    public CSC(OWLDataFactory dataFactory) {
-        this.dataFactory = dataFactory;
+    public CSC() {
+        this.manager = OWLManager.createOWLOntologyManager();
+        this.dataFactory = manager.getOWLDataFactory();
     }
 
     /**
