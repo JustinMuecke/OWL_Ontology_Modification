@@ -17,7 +17,7 @@ public class CSC implements Anti_Pattern {
     }
 
     /**
-     * Pattern: c2 ⊑ c1, c2 ⊑ c3, c1 ⊑ c3
+     * Pattern: c2 ⊑ c1, c3 ⊑ c2, c1 ⊑ c3
      * @param ontology
      * @return
      */
@@ -28,6 +28,11 @@ public class CSC implements Anti_Pattern {
         return Optional.empty();
     }
 
+    /**
+     * If there is a chain of subclasses of the form c2 ⊑ c1 -> c3 ⊑ c2, add cyclic behaviour by adding c1 ⊑ c3
+     * @param ontology the OWL ontology in which we look for cyclic behaviour
+     * @return the SubClassOfAxiom which needs to be injected if possible
+     */
     private Optional<OWLSubClassOfAxiom> findInjectableSubClassAxiom(OWLOntology ontology){
         Set<OWLSubClassOfAxiom> subClassOfAxiomSet = ontology.getAxioms(AxiomType.SUBCLASS_OF);
         for(OWLSubClassOfAxiom subClassOfAxiom : subClassOfAxiomSet){
