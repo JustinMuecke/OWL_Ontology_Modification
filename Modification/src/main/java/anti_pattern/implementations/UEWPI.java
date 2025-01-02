@@ -35,7 +35,6 @@ public class UEWPI implements Anti_Pattern {
 
         Optional<OWLSubObjectPropertyOfAxiom> propertyResult=findInjectableSubPropertyAxioms(ontology);
         if(propertyResult.isPresent()) return Optional.of(List.of(propertyResult.get()));
-
         return Optional.empty();
     }
 
@@ -45,7 +44,6 @@ public class UEWPI implements Anti_Pattern {
      * @return
      */
     private Optional<OWLDisjointClassesAxiom> findInjectableDisjointClassAxioms(OWLOntology ontology){
-
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
             OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
@@ -143,7 +141,6 @@ public class UEWPI implements Anti_Pattern {
      * @return
      */
     private Optional<OWLSubClassOfAxiom> findInjectableSubClassAxiomsWithExistsRestriction(OWLOntology ontology){
-
         Set<OWLSubObjectPropertyOfAxiom> subPropertyAxiomSet = ontology.getAxioms(AxiomType.SUB_OBJECT_PROPERTY);
         for(OWLSubObjectPropertyOfAxiom subPropertyAxiom : subPropertyAxiomSet) {
             OWLObjectPropertyExpression r1 = subPropertyAxiom.getSubProperty();
@@ -195,18 +192,24 @@ public class UEWPI implements Anti_Pattern {
                 .map(OWLSubClassOfAxiom::getSubClass)
                 .collect(Collectors.toSet());
         // forAllSubClasses c1 ⊑ ∀
+        if(existsSubClasses.isEmpty()) return Optional.empty();
         Set<OWLClassExpression> forAllSubClass = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_ALL_VALUES_FROM))
                 .map(OWLSubClassOfAxiom::getSubClass)
                 .collect(Collectors.toSet());
+        if(forAllSubClass.isEmpty()) return Optional.empty();
+
         Set<OWLClassExpression> c1Candidates = new HashSet<>(existsSubClasses);
         c1Candidates.retainAll(forAllSubClass);
 
+        System.out.println(c1Candidates);
+        if(c1Candidates.isEmpty()) return Optional.empty();
         // Iterate over them and see if we can find the relations r1 and r2
         for(OWLClassExpression c1 : c1Candidates){
             OWLClassExpression c2 = null, c3 = null;
             OWLObjectPropertyExpression r1 = null, r2 = null;
             //Find c2
+
             for (OWLSubClassOfAxiom subClassAxiom : ontology.getAxioms(AxiomType.SUBCLASS_OF)) {
                 if (!subClassAxiom.getSubClass().equals(c1)) continue;
                 OWLClassExpression superClass = subClassAxiom.getSuperClass();

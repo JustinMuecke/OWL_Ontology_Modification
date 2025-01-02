@@ -117,8 +117,8 @@ public class UE implements Anti_Pattern {
         if(possibleSubClassOfAxiomsContainingC2.isEmpty()) return Optional.empty();
         OWLSubClassOfAxiom subClassOfAxiomContainingC2 = possibleSubClassOfAxiomsContainingC2.iterator().next();
         OWLClassExpression c1 = subClassOfAxiomContainingC2.getSubClass();
-        OWLClassExpression c2 = ((OWLObjectAllValuesFrom) subClassOfAxiomContainingC2.getSuperClass()).getFiller();
-        OWLObjectPropertyExpression r = ((OWLObjectAllValuesFrom) subClassOfAxiomContainingC2.getSuperClass()).getProperty();
+        OWLClassExpression c2 = ((OWLObjectSomeValuesFrom) subClassOfAxiomContainingC2.getSuperClass()).getFiller();
+        OWLObjectPropertyExpression r = ((OWLObjectSomeValuesFrom) subClassOfAxiomContainingC2.getSuperClass()).getProperty();
         Optional<OWLClassExpression> possibleC3 = ontology.nestedClassExpressions().filter(expression -> !expression.equals(c1) && !expression.equals(c2)).findFirst();
         if(possibleC3.isEmpty()) return Optional.empty();
         OWLClassExpression c3 = possibleC3.get();

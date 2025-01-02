@@ -32,7 +32,7 @@ public class UEWI2 implements Anti_Pattern {
                 Set<OWLClassExpression> possibleC3 = Util.findFillersOfObjectSomeValuesFromAxioms(ontology, c2, c1);
                 Set<OWLClassExpression> possibleC4 = Util.findFillersOfObjectAllValuesFromAxioms(ontology, c1, c2);
 
-                if (!(possibleC3.isEmpty() && possibleC4.isEmpty())) {
+                if (!(possibleC3.isEmpty() || possibleC4.isEmpty())) {
                     return Optional.of(List.of(dataFactory.getOWLDisjointClassesAxiom(possibleC3.iterator().next(), possibleC4.iterator().next())));
                 }
             }

@@ -2,34 +2,32 @@ package main;
 
 import anti_pattern.implementations.*;
 import anti_pattern.Anti_Pattern;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.DeliverCallback;
-import database.PostgresDB;
 import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.formats.FunctionalSyntaxDocumentFormat;
 import org.semanticweb.owlapi.formats.RDFXMLDocumentFormat;
 import org.semanticweb.owlapi.io.FileDocumentSource;
-import org.semanticweb.owlapi.io.OWLParserException;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.rdf.rdfxml.parser.RDFXMLParser;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
-import java.sql.SQLOutput;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class Main {
-    private static final String QUEUE_INPUT = "Modules_Modify";
-    private static final String QUEUE_OUTPUT = "Modules_Preprocess";
-    private final static String INPUT_PATH = "/input/";
-    private final static String OUTPUT_PATH = "/output/";
+
+    private final static List<String> PREFIXES = List.of("EID", "AIO", "OIL", "CSC", "OILWI", "OILWPI", "OOD", "OOR", "SOSINETO", "UE", "UEWI1", "UEWI2", "UEWIP", "UEWPI");
+    private final static String INPUT_PATH = "../../data/ont_modules/";
+    private final static String OUTPUT_PATH = "../../data/ont_modules_inconsistent";
     private static HashMap<String, List<OWLAxiom>> possibleInjections;
     private static final List<Anti_Pattern> consideredAntiPattern = new LinkedList<>(List.of(
             new EID(),
             new AIO(),
+            new CSC(),
+            new OOR(),
+            new OOD(),
             new OIL(),
             new OILWI(),
             new OILWPI(),
@@ -41,94 +39,45 @@ public class Main {
             new UEWPI()
             ));
 
-    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
-        PostgresDB database = new PostgresDB("postgres", "data_processing", "postgres_user", "postgress_password", 5432);
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("rabbitmq");
-        factory.setUsername("rabbitmq_user");
-        factory.setPassword("rabbitmq_password");
-        Connection connection = null;
+    public static void main(String[] args) {
+        File[] dir = new File(INPUT_PATH).listFiles();
 
-        while (connection == null) {
-            try {
-                // Attempt to establish a connection and channel
-                connection = factory.newConnection();
+        // Create a thread pool with a fixed number of threads
+        ExecutorService executor = Executors.newFixedThreadPool(4); // Adjust the number based on your system
 
-                System.out.println("Connected to RabbitMQ successfully.");
-            } catch (Exception e) {
-                System.out.println("Error connecting to RabbitMQ: " + e.getMessage());
-                System.out.println("Retrying in 5 seconds...");
+        // Use a list to collect the future objects of the tasks
+        List<Callable<Void>> tasks = new ArrayList<>();
 
-                // Sleep for 5 seconds before retrying
+        for (File file : dir) {
+            if (PREFIXES.contains(file.getName().split("_")[0])) continue;
+
+            // Add the task to the list of tasks
+            tasks.add(() -> {
                 try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+                    List<String> fileNames = executeInjection(file.getPath());
+                    System.out.println("Created Files: " + fileNames);
+                } catch (StackOverflowError overflowError) {
+                    System.out.println("Overflow on ontology: " + file.getName());
                 }
-            }
+                return null; // Return value is null, but you could return other types if needed
+            });
         }
-        Channel channel = connection.createChannel();
-        channel.queueDeclare(QUEUE_INPUT, true, false, false, null);
-        channel.queueDeclare(QUEUE_OUTPUT, true, false, false, null);
 
-        DeliverCallback deliverCallback = getDeliverCallback(channel, database, connection);
-        channel.basicConsume(QUEUE_INPUT, false, deliverCallback, consumerTag -> { });
-        System.out.println("Waiting for messages. To exit press CTRL+C");
+        try {
+            // Submit all tasks to the executor
+            executor.invokeAll(tasks);
 
-        while (true) {
-            Thread.sleep(1000);
+            // Shut down the executor
+            executor.shutdown();
+        } catch (InterruptedException e) {
+            System.err.println("Execution interrupted: " + e.getMessage());
         }
-    }
 
 
-    private static DeliverCallback getDeliverCallback(Channel channel, PostgresDB database, Connection connection) {
-        Channel finalChannel = channel;
-        return (consumerTag, delivery) -> {
-            //Add Database calls
 
-            String filepath = new String(delivery.getBody(), StandardCharsets.UTF_8);
-            database.updateStatusInModificationDatabaseStart(filepath);
-            System.out.println(filepath +": Execute Injection");
 
-            List<String> newFiles = executeInjection(INPUT_PATH + filepath);
-            System.out.println(filepath + ": NEW FILE! " + newFiles);
-            if(!newFiles.isEmpty()) {
-                database.updateStatusInModificationDatabaseEnd(filepath, newFiles);
-                for(String newFile : newFiles){
-                    System.out.println(filepath + ": Trying to publish to " + QUEUE_OUTPUT);
-                    try {
 
-                        System.out.println(finalChannel.toString());
-                        System.out.println("CHANNEL OPEN: " + finalChannel.isOpen());
-                        if(!finalChannel.isOpen()) {
-                            System.out.println("MAKE NEW CHANNEL");
-                            Channel newChannel = connection.createChannel();
-                            newChannel.queueDeclare(QUEUE_INPUT, true, false, false, null);
-                            newChannel.queueDeclare(QUEUE_OUTPUT, true, false, false, null);
-                            System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
-                            newChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
-                            System.out.println("NEW CHANNEL OPEN: " + newChannel.isOpen());
-                        }
-                        else{
-                            finalChannel.basicPublish("", QUEUE_OUTPUT, null, newFile.getBytes(StandardCharsets.UTF_8));
-                            System.out.println("CHANNEL OPEN AFTER: " + finalChannel.isOpen());
-                        }
 
-                    }catch(IOException e){
-                        e.printStackTrace();
-                    }
-                    System.out.println(filepath +": Published");
-                    database.updasteStatusInPreprocessingDatabase(newFile);
-                    System.out.println(filepath +": Database Updated");
-                }
-            }
-            else{
-                System.out.println(filepath +": Nothing Injected!");
-            }
-            System.out.println("Received file: " + filepath);
-            // Acknowledge the message
-            finalChannel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-        };
     }
 
     private static OWLOntology loadOntology(File file, OWLOntologyManager manager) {
@@ -172,8 +121,7 @@ public class Main {
                 manager.addAxiom(ontology, injectionAxiom);
             }
             // Set RDF/XML format explicitly
-            RDFXMLDocumentFormat format = new RDFXMLDocumentFormat();
-
+            FunctionalSyntaxDocumentFormat  format = new FunctionalSyntaxDocumentFormat();
             try {
                 // Construct the output file path and save the ontology
                 File outputFile = new File(outputDir, patternName + "_" + injectionAxioms.size() + "_" + file.getName());

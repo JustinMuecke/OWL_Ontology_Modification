@@ -16,7 +16,7 @@ public class Util {
         Set<OWLObjectSomeValuesFrom> possibleA2_2 = ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSubClass().equals(c2))
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
-                .map(ax -> ((OWLObjectSomeValuesFrom) ax))
+                .map(ax -> ((OWLObjectSomeValuesFrom) ax.getSuperClass()))
                 .collect(Collectors.toSet());
         for (OWLObjectSomeValuesFrom allValuesFrom : possibleA2_2) {
             OWLObjectPropertyExpression property = allValuesFrom.getProperty();
@@ -111,7 +111,7 @@ public class Util {
         return ontology.axioms(AxiomType.SUBCLASS_OF)
                 .filter(ax -> ax.getSubClass().equals(subClass1))
                 .filter(ax -> ax.getSuperClass().getClassExpressionType().equals(ClassExpressionType.OBJECT_SOME_VALUES_FROM))
-                .map(ax -> ((OWLObjectAllValuesFrom) ax.getSuperClass()).getFiller())
+                .map(ax -> ((OWLObjectSomeValuesFrom) ax.getSuperClass()).getFiller())
                 .filter(classExpression -> !(classExpression.equals(subClass1) && classExpression.equals(subClass2)))
                 .collect(Collectors.toSet());
 

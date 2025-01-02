@@ -50,9 +50,11 @@ public class EID implements Anti_Pattern {
     private Optional<List<OWLAxiom>> findInjectableCombinationOfDisjointAndEquivalentClassAxioms(OWLOntology ontology){
         Set<OWLClassExpression> classExpressionsInOntology = ontology.getNestedClassExpressions();
         if(classExpressionsInOntology.size() < 2) return Optional.empty();
-        OWLClassExpression c1 = classExpressionsInOntology.iterator().next();
-        OWLClassExpression c2 = classExpressionsInOntology.iterator().next();
-        return Optional.of(List.of(dataFactory.getOWLDisjointClassesAxiom(c1, c2), dataFactory.getOWLEquivalentClassesAxiom(c1, c2)));
+        OWLClass thing = dataFactory.getOWLThing();
+        Optional<OWLClassExpression> c1 = classExpressionsInOntology.stream().filter(ax -> !ax.equals(thing)).findFirst();
+        Optional<OWLClassExpression> c2 = classExpressionsInOntology.stream().filter(ax -> !ax.equals(thing)).findFirst();
+        if(c1.isEmpty() || c2.isEmpty()) return Optional.empty();
+        return Optional.of(List.of(dataFactory.getOWLDisjointClassesAxiom(c1.get(), c2.get()), dataFactory.getOWLEquivalentClassesAxiom(c1.get(), c2.get())));
     }
     @Override
     public String getName() {
