@@ -19,8 +19,8 @@ import java.util.concurrent.Executors;
 public class Main {
 
     private final static List<String> PREFIXES = List.of("EID", "AIO", "OIL", "CSC", "OILWI", "OILWPI", "OOD", "OOR", "SOSINETO", "UE", "UEWI1", "UEWI2", "UEWIP", "UEWPI");
-    private final static String INPUT_PATH = "../../data/ont_modules/";
-    private final static String OUTPUT_PATH = "../../data/ont_modules_inconsistent";
+    private final static String INPUT_PATH = "/input/";
+    private final static String OUTPUT_PATH = "/output/";
     private static HashMap<String, List<OWLAxiom>> possibleInjections;
     private static final List<Anti_Pattern> consideredAntiPattern = new LinkedList<>(List.of(
             new EID(),
